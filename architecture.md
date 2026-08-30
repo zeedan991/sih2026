@@ -228,10 +228,14 @@ Weighting: unchanged inverse-validation-MSE scheme, spanning all 6 models.
 | Model | Verified test accuracy |
 |---|---|
 | Quantum-kernel SVM (angle) | **95.6%** |
-| VQC (re-upload + re-map) | **93.0%** |
+| VQC (re-upload + re-map), 100 epochs, 3 seeds | **91.23% mean; 89.47-93.86% range** |
 | Classical, full 30 features (LogReg) | 98.25% |
-| Classical, **same 4 features** as quantum | **92.98%** — ties the VQC |
+| Classical LogReg, **same 4 features**, 3 seeds | **93.57% mean; 92.98-93.86% range** |
+| Classical Random Forest, **same 4 features**, 3 seeds | **93.27% mean; 92.11-93.86% range** |
+| Classical XGBoost, **same 4 features**, 3 seeds | **93.27% mean; 92.98-93.86% range** |
+| Classical SVM, **same 4 features**, 3 seeds | **93.86% mean; 92.98-94.74% range** |
 
+- The earlier 20-epoch VQC quick check measured 87.43% mean with a 74.56-93.86% range. Re-running the identical seeds/splits for 100 epochs raised the mean to 91.23% and narrowed the range to 89.47-93.86%; see `decisions.md` D-20. Twenty epochs remains a regression-test budget, not a final benchmark budget.
 - VQC forward pass: ~5ms
 - Quantum kernel evaluation: ~7ms/pair
 - Full training kernel matrix (~455 samples): budget 3-4 minutes

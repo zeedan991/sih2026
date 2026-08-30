@@ -201,3 +201,13 @@ Each entry: what we decided, why, and what we gave up. Read this before overturn
 **Verification:** A fresh Python 3.14 virtual environment installed every application pin unchanged, `pip check` reported no broken requirements, all application imports succeeded, and `lightning.qubit` initialized. Adding `pytest==9.1.1` made the documented test commands executable on Python 3.14; the full Phase 1 suite passed.
 
 **Decision:** Python 3.14 is the local and container runtime for this pinned stack. Keep `xgboost==3.4.1` unchanged. Pin `pytest==9.1.1` under testing dependencies so a fresh environment can run the repository's required checks without an undocumented global tool.
+
+---
+
+### D-20. Final VQC benchmarks use at least 100 epochs; 20 epochs is only a quick regression budget
+
+**Context:** The first three-seed Phase 1 benchmark used 20 full-batch Adam epochs at learning rate 0.05. Seeds 42 and 123 reached 93.86% accuracy, but seed 2026 reached only 74.56% and still had a much higher final training cost (0.528 versus 0.270 and 0.233). That run was sufficient to prove training was active, but not sufficient to treat the accuracy range as converged.
+
+**Verification:** Re-ran the identical code, seeds (42, 123, 2026), stratified splits, preprocessing, initializations, and learning rate for 100 epochs. The 20-epoch accuracies were 93.86%, 93.86%, and 74.56% (87.43% mean; 74.56-93.86% range). At 100 epochs they were 90.35%, 93.86%, and 89.47% (91.23% mean; 89.47-93.86% range). Final costs fell from 0.270/0.233/0.528 at epoch 20 to 0.200/0.207/0.232 at epoch 100. Seed 2026 improved by 14.91 percentage points and the total accuracy range narrowed from 19.30 to 4.39 points. Seed 42 declined by 3.51 points despite lower training loss, so additional epochs improve convergence stability but do not guarantee monotonically better held-out accuracy.
+
+**Decision:** Use at least 100 epochs for every Phase 2 VQC and for reported VQC/ensemble benchmarks. Keep 20 epochs only for fast D-02 regression checks. Report both the 20- and 100-epoch results when discussing this transition; do not hide the seed-42 decline or imply test accuracy must improve monotonically with training loss. Carry forward the already-measured same-four-feature classical means without rerunning them for the ensemble comparison: LogReg 93.57%, Random Forest 93.27%, XGBoost 93.27%, and SVM 93.86%.
