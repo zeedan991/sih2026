@@ -290,7 +290,7 @@ def parse_args() -> argparse.Namespace:
         "--epochs",
         type=int,
         default=DEFAULT_BENCHMARK_EPOCHS,
-        help="Full-batch Adam epochs for each VQC (default: 20)",
+        help="Full-batch Adam epochs for each VQC (default: 100)",
     )
     parser.add_argument(
         "--learning-rate",
