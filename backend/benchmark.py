@@ -37,7 +37,7 @@ from backend.quantum.vqc_circuits import (
 
 
 DEFAULT_SEEDS: Final[tuple[int, ...]] = (42, 123, 2026)
-DEFAULT_BENCHMARK_EPOCHS: Final[int] = 20
+DEFAULT_BENCHMARK_EPOCHS: Final[int] = 100
 
 
 @dataclass(frozen=True, slots=True)
