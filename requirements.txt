@@ -1,6 +1,6 @@
-# Verified compatible together in a clean virtualenv, 2026-08-23.
-# Installed and smoke-tested end-to-end (data load -> PCA -> VQC training ->
-# SHAP explanation) in the same environment -- see architecture.md sec 2-3.
+# Verified compatible together in a clean Python 3.14 virtualenv, 2026-08-30.
+# Installed and smoke-tested for the Phase 0-1 path (data load -> SelectKBest
+# feature selection -> VQC/classical training) -- see architecture.md sec 2-3.
 #
 # NOTE: torch is intentionally NOT included. The core pipeline doesn't need
 # it (see decisions.md D-02). Only add it if you deliberately build a

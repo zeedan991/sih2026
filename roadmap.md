@@ -9,7 +9,7 @@ Build order deliberately front-loads the highest-risk, least-familiar piece (the
 ## Phase 0 — Setup (before Day 1)
 
 - Clone repo, add `AGENTS.md`, `prd.md`, `architecture.md`, `roadmap.md`, `decisions.md` to the root
-- `pip install -r requirements.txt` in a clean virtualenv — this exact file was tested end-to-end (see `architecture.md` §2), so if it fails on your machine, suspect your environment (Python version, OS) before suspecting the file
+- Create a Python 3.14 virtualenv and run `pip install -r requirements.txt` — this exact file was tested end-to-end on Python 3.14 (see `architecture.md` §2 and `decisions.md` D-19). The pinned XGBoost requires Python 3.12 or newer.
 - Assign roles against `architecture.md` §5's folder structure. Recommend **at least 2 people** ramp up on `backend/quantum/` specifically — it's the piece with no ready-made template and the one place a silent bug (see below) can eat days
 - Everyone reads `decisions.md` D-02, D-03, and D-15 once. These are verified silent-failure bugs — code that runs cleanly and even looks numerically fine, but is wrong. Know them going in so nobody rediscovers them the hard way, and so nobody "fixes" this file back to the buggy pattern while refactoring.
 

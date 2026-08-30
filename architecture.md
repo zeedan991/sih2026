@@ -59,6 +59,7 @@ Every prediction screen shows a quantum-model reading and a classical-model read
 | Classical ML | scikit-learn, XGBoost | `scikit-learn==1.9.0`, `xgboost==3.4.1` | Baselines — both full-feature and same-4-feature variants (§3.6) |
 | Explainability | SHAP, LIME | `shap==0.52.0`, `lime==0.2.0.1` | Feature attribution, now with real clinical feature names by construction |
 | Numerics | NumPy, pandas, SciPy | `numpy==2.5.2`, `pandas==3.0.5`, `scipy==1.18.1` | Array ops, data handling |
+| Testing | pytest, HTTPX2 | `pytest==9.1.1`, `httpx2==2.12.0` | Regression and API test runner dependencies |
 | Dev/debug frontend | Streamlit | `streamlit==1.62.0` | Fast internal iteration only |
 | Judge-facing frontend | Custom HTML/CSS/JS | — | The polished UI |
 | Containerization | Docker | — | One-command reproducible setup |
@@ -328,7 +329,7 @@ Responsive to mobile width, visible keyboard focus states, `prefers-reduced-moti
 ## 7. Deployment
 
 ```dockerfile
-FROM python:3.10-slim
+FROM python:3.14-slim
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

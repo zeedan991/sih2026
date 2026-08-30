@@ -191,3 +191,13 @@ Each entry: what we decided, why, and what we gave up. Read this before overturn
 **Verification:** Confirmed the warning fires but every QSVM call in this project still executes correctly and produces correct probabilities on the pinned version — this is a deprecation warning, not a current failure.
 
 **Decision:** Keep `SVC(kernel="precomputed", probability=True)` as documented (§3.4, §3.5) since it works on the pinned stack, but don't upgrade scikit-learn mid-project without checking this specifically. If the team upgrades past 1.11 (deliberately or via an unpinned `pip install -U`), switch to `CalibratedClassifierCV(SVC(kernel="precomputed"), ensemble=False)` for probability outputs — the rest of the QSVM code is unaffected either way.
+
+---
+
+### D-19. Python 3.14 is the reproducible runtime; pytest is an explicit pin
+
+**Context:** The first clean Phase 0 install used Python 3.11 because the deployment sketch still named Python 3.10. It failed before installation because the pinned `xgboost==3.4.1` declares `Requires-Python >=3.12`. The machine had Python 3.14 available, and the user explicitly approved using it. A second environment defect appeared when Phase 1's required regression tests could not start: `AGENTS.md` documented `pytest` commands, but `requirements.txt` did not include pytest.
+
+**Verification:** A fresh Python 3.14 virtual environment installed every application pin unchanged, `pip check` reported no broken requirements, all application imports succeeded, and `lightning.qubit` initialized. Adding `pytest==9.1.1` made the documented test commands executable on Python 3.14; the full Phase 1 suite passed.
+
+**Decision:** Python 3.14 is the local and container runtime for this pinned stack. Keep `xgboost==3.4.1` unchanged. Pin `pytest==9.1.1` under testing dependencies so a fresh environment can run the repository's required checks without an undocumented global tool.
