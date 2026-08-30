@@ -24,6 +24,9 @@ fastapi==0.141.1
 uvicorn==0.52.4
 
 # --- Testing only (not needed to run the app itself) ---
+# The repository's documented test commands use pytest directly.
+pytest==9.1.1
+
 # FastAPI's TestClient (used for pytest API tests per AGENTS.md's test
 # commands) requires this in the version pinned above -- found during
 # testing, not documented by FastAPI itself in an obvious place, so
