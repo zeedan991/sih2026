@@ -52,6 +52,33 @@ def test_amplitude_embedding_uses_exactly_two_qubits_for_four_features():
     np.testing.assert_allclose(np.diag(zero_kernel), np.ones(2), atol=1e-10)
 
 
+def test_amplitude_zero_vector_fallback_is_general_and_does_not_mutate_inference_input():
+    X_train = np.asarray(
+        [
+            [0.10, 0.15, 0.20, 0.25],
+            [0.20, 0.25, 0.30, 0.35],
+            [0.30, 0.35, 0.40, 0.45],
+            [2.30, 2.35, 2.40, 2.45],
+            [2.50, 2.55, 2.60, 2.65],
+            [2.70, 2.75, 2.80, 2.85],
+        ],
+        dtype=float,
+    )
+    y_train = np.asarray([0, 0, 0, 1, 1, 1], dtype=int)
+    qsvm = QuantumKernelSVM(embedding="amplitude", random_state=7).fit(
+        X_train, y_train
+    )
+    live_like_zeros = np.zeros((3, 4), dtype=float)
+    original = live_like_zeros.copy()
+
+    probabilities = qsvm.predict_proba(live_like_zeros)
+
+    assert probabilities.shape == (3, 2)
+    assert np.all(np.isfinite(probabilities))
+    np.testing.assert_allclose(probabilities.sum(axis=1), np.ones(3), atol=1e-10)
+    np.testing.assert_array_equal(live_like_zeros, original)
+
+
 @pytest.fixture(scope="module")
 def fitted_angle_qsvm() -> QuantumKernelSVM:
     # Both classes are deliberately present; 1 means benign in sklearn's WBCD

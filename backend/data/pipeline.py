@@ -4,7 +4,8 @@ The returned data keeps three explicit feature views:
 
 * all 30 imputed and standardized features for realistic baselines;
 * the same four named selected features for fair classical comparisons;
-* those four features additionally scaled to ``[0, pi]`` for quantum models.
+* those four features additionally scaled just inside ``[0, pi]`` for quantum
+  models, avoiding exact rotation/amplitude boundaries during live inference.
 
 Classical and quantum labels are separate arrays throughout.  The original
 sklearn encoding is never mutated: 0 is malignant and 1 is benign.
@@ -27,6 +28,12 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 FloatArray = NDArray[np.float64]
 IntArray = NDArray[np.int64]
 StringArray = NDArray[np.str_]
+
+# Keep quantum inputs strictly away from exact range boundaries.  ``clip=True``
+# then gives held-out and future API rows the same guarantee as training rows.
+QUANTUM_RANGE_EPSILON = 1.0e-6
+QUANTUM_RANGE_MIN = QUANTUM_RANGE_EPSILON
+QUANTUM_RANGE_MAX = float(np.pi) - QUANTUM_RANGE_EPSILON
 
 
 def prediction_to_label(prediction: int) -> str:
@@ -75,7 +82,11 @@ class PreparedBreastCancerData:
     def transform_features(
         self, features: ArrayLike
     ) -> tuple[FloatArray, FloatArray, FloatArray]:
-        """Transform raw 30-feature rows into all three fitted feature views."""
+        """Transform raw 30-feature rows into all three fitted feature views.
+
+        The quantum view is clipped strictly inside ``(0, pi)`` by the fitted
+        scaler, including for raw live-inference values outside its fit range.
+        """
 
         array = np.asarray(features, dtype=float)
         if array.ndim == 1:
@@ -131,8 +142,11 @@ def prepare_breast_cancer_data(
     X_train_selected = selector.fit_transform(X_train_full, y_train)
     X_test_selected = selector.transform(X_test_full)
 
-    # clip=True keeps unseen test/prediction values within valid rotation angles.
-    quantum_scaler = MinMaxScaler(feature_range=(0.0, float(np.pi)), clip=True)
+    # The inward range avoids exact boundary vectors. clip=True applies the
+    # same guarantee to unseen test rows and future live/API predictions.
+    quantum_scaler = MinMaxScaler(
+        feature_range=(QUANTUM_RANGE_MIN, QUANTUM_RANGE_MAX), clip=True
+    )
     X_train_quantum = quantum_scaler.fit_transform(X_train_selected)
     X_test_quantum = quantum_scaler.transform(X_test_selected)
 

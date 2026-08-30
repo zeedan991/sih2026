@@ -62,7 +62,11 @@ def test_selected_features_match_the_verified_clinical_features():
 
 
 def test_scalers_are_fit_on_training_data_and_quantum_range_is_bounded():
-    from backend.data.pipeline import prepare_breast_cancer_data
+    from backend.data.pipeline import (
+        QUANTUM_RANGE_MAX,
+        QUANTUM_RANGE_MIN,
+        prepare_breast_cancer_data,
+    )
 
     prepared = prepare_breast_cancer_data(random_state=42)
     raw = load_breast_cancer()
@@ -78,10 +82,45 @@ def test_scalers_are_fit_on_training_data_and_quantum_range_is_bounded():
     np.testing.assert_allclose(prepared.X_train_full.mean(axis=0), 0.0, atol=1e-12)
     np.testing.assert_allclose(prepared.X_train_full.std(axis=0), 1.0, atol=1e-12)
 
-    np.testing.assert_allclose(prepared.X_train_quantum.min(axis=0), 0.0)
-    np.testing.assert_allclose(prepared.X_train_quantum.max(axis=0), np.pi)
-    assert np.all(prepared.X_test_quantum >= 0.0)
-    assert np.all(prepared.X_test_quantum <= np.pi)
+    assert prepared.quantum_scaler.feature_range == (
+        QUANTUM_RANGE_MIN,
+        QUANTUM_RANGE_MAX,
+    )
+    assert prepared.quantum_scaler.clip is True
+    np.testing.assert_allclose(
+        prepared.X_train_quantum.min(axis=0), QUANTUM_RANGE_MIN
+    )
+    np.testing.assert_allclose(
+        prepared.X_train_quantum.max(axis=0), QUANTUM_RANGE_MAX
+    )
+    assert np.all(prepared.X_train_quantum > 0.0)
+    assert np.all(prepared.X_train_quantum < np.pi)
+    assert np.all(prepared.X_test_quantum > 0.0)
+    assert np.all(prepared.X_test_quantum < np.pi)
+
+
+def test_live_like_out_of_range_rows_are_clipped_strictly_inside_quantum_bounds():
+    from backend.data.pipeline import (
+        QUANTUM_RANGE_MAX,
+        QUANTUM_RANGE_MIN,
+        prepare_breast_cancer_data,
+    )
+
+    prepared = prepare_breast_cancer_data(random_state=42)
+    # Deliberately exceed every fitted clinical range in both directions. This
+    # follows the same public transformation path future API input will use.
+    live_like_rows = np.vstack(
+        [np.full(30, -1.0e12, dtype=float), np.full(30, 1.0e12, dtype=float)]
+    )
+
+    _, _, quantum = prepared.transform_features(live_like_rows)
+
+    assert np.all(quantum >= QUANTUM_RANGE_MIN)
+    assert np.all(quantum <= QUANTUM_RANGE_MAX)
+    assert np.all(quantum > 0.0)
+    assert np.all(quantum < np.pi)
+    np.testing.assert_allclose(quantum[0], QUANTUM_RANGE_MIN)
+    np.testing.assert_allclose(quantum[1], QUANTUM_RANGE_MAX)
 
 
 def test_transform_features_reproduces_all_test_feature_views():
