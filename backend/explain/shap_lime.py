@@ -110,7 +110,13 @@ class ShapExplanation:
 
 @dataclass(frozen=True, slots=True)
 class LimeExplanation:
-    """LIME local-surrogate output for sklearn class 1 (benign)."""
+    """LIME local-surrogate output for sklearn class 1 (benign).
+
+    ``attributions`` are each local coefficient multiplied by the patient's
+    standardized displacement from LIME's training mean.  This turns a slope
+    into an observed-patient contribution, making its direction comparable to
+    SHAP's background-relative contribution.
+    """
 
     scope: ExplanationScope
     feature_names: tuple[str, ...]
@@ -119,6 +125,8 @@ class LimeExplanation:
     prediction_probability: float
     surrogate_intercept: float | None
     surrogate_prediction: float | None
+    reconstructed_surrogate_prediction: float | None
+    surrogate_additivity_residual: float | None
     elapsed_seconds: float
     attributions: tuple[FeatureAttribution, ...]
     top_features: tuple[FeatureAttribution, ...]
@@ -644,6 +652,19 @@ class ExplainabilityService:
         mapping = explanation.as_map()
         if 1 not in mapping:
             raise ValueError("LIME did not return an explanation for benign class 1")
+        scaler = getattr(explainer, "scaler", None)
+        scaler_mean = np.asarray(getattr(scaler, "mean_", None), dtype=float)
+        scaler_scale = np.asarray(getattr(scaler, "scale_", None), dtype=float)
+        expected_shape = (len(self.feature_names),)
+        if (
+            scaler_mean.shape != expected_shape
+            or scaler_scale.shape != expected_shape
+            or not np.isfinite(scaler_mean).all()
+            or not np.isfinite(scaler_scale).all()
+            or np.any(scaler_scale <= 0.0)
+        ):
+            raise ValueError("LIME returned invalid feature scaling metadata")
+        patient_scaled = (patient[0] - scaler_mean) / scaler_scale
         values = np.zeros(len(self.feature_names), dtype=float)
         for feature_index, contribution in mapping[1]:
             index = int(feature_index)
@@ -652,8 +673,26 @@ class ExplainabilityService:
             numeric = float(contribution)
             if not np.isfinite(numeric):
                 raise ValueError("LIME returned a non-finite attribution")
-            values[index] = numeric
+            values[index] = numeric * patient_scaled[index]
         prediction_probability = float(predictor(patient)[0])
+        surrogate_intercept = _optional_mapping_value(
+            getattr(explanation, "intercept", None),
+            class_index=1,
+        )
+        surrogate_prediction = _optional_mapping_value(
+            getattr(explanation, "local_pred", None),
+            class_index=1,
+        )
+        reconstructed_surrogate = (
+            None
+            if surrogate_intercept is None
+            else float(surrogate_intercept + values.sum())
+        )
+        surrogate_residual = (
+            None
+            if surrogate_prediction is None or reconstructed_surrogate is None
+            else float(surrogate_prediction - reconstructed_surrogate)
+        )
         attributions, top_features = _structured_attributions(
             self.feature_names,
             patient[0],
@@ -666,14 +705,10 @@ class ExplainabilityService:
             output_class="benign",
             positive_label=1,
             prediction_probability=prediction_probability,
-            surrogate_intercept=_optional_mapping_value(
-                getattr(explanation, "intercept", None),
-                class_index=1,
-            ),
-            surrogate_prediction=_optional_mapping_value(
-                getattr(explanation, "local_pred", None),
-                class_index=1,
-            ),
+            surrogate_intercept=surrogate_intercept,
+            surrogate_prediction=surrogate_prediction,
+            reconstructed_surrogate_prediction=reconstructed_surrogate,
+            surrogate_additivity_residual=surrogate_residual,
             elapsed_seconds=time.perf_counter() - started,
             attributions=attributions,
             top_features=top_features,

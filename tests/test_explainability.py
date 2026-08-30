@@ -115,6 +115,7 @@ def _install_fake_explainers(monkeypatch, captured):
             captured["lime_feature_names"] = tuple(feature_names)
             captured["lime_class_names"] = tuple(class_names)
             captured["lime_random_state"] = random_state
+            self.scaler = SimpleNamespace(mean_=np.zeros(4), scale_=np.ones(4))
             assert mode == "classification"
             assert discretize_continuous is False
 
@@ -295,9 +296,12 @@ def test_real_linear_predictor_has_additive_shap_and_clinical_lime_names():
         abs=1e-7,
     )
     assert abs(shap_result.additivity_residual) < 1e-7
+    assert lime_result.surrogate_additivity_residual == pytest.approx(0.0, abs=1e-7)
     assert tuple(item.feature_name for item in lime_result.attributions) == tuple(
         CLINICAL_NAMES
     )
     assert {item.direction for item in lime_result.attributions}.issubset(
         {"toward_benign", "toward_malignant", "neutral"}
     )
+    cross_check = shap_lime.cross_check_attributions(shap_result, lime_result, top_k=4)
+    assert cross_check.sign_agreement_ratio == pytest.approx(1.0)
