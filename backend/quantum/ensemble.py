@@ -73,12 +73,12 @@ def make_oob_bootstrap(*, n_samples: int, seed: int) -> OOBBootstrap:
 
 
 def _validated_binary_targets(values: Sequence[int], *, name: str) -> IntArray:
-    array = np.asarray(values, dtype=np.int64)
-    if array.ndim != 1 or array.size == 0:
+    raw = np.asarray(values)
+    if raw.ndim != 1 or raw.size == 0:
         raise ValueError(f"{name} must be a non-empty one-dimensional array")
-    if not np.isin(array, (0, 1)).all():
+    if not np.isin(raw, (0, 1)).all():
         raise ValueError(f"{name} must contain only original labels {{0,1}}")
-    return array
+    return np.asarray(raw, dtype=np.int64)
 
 
 def _validated_probabilities(

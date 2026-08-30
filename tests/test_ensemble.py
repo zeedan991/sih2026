@@ -82,3 +82,12 @@ def test_paired_correctness_ttest_handles_identical_predictions() -> None:
     assert comparison.statistic == 0.0
     assert comparison.p_value == 1.0
     assert comparison.mean_correctness_difference == 0.0
+
+
+def test_paired_correctness_ttest_rejects_fractional_labels() -> None:
+    with pytest.raises(ValueError, match="original labels"):
+        paired_correctness_ttest(
+            np.array([0.0, 0.5, 1.0]),
+            np.array([0, 0, 1]),
+            np.array([0, 1, 1]),
+        )
