@@ -58,7 +58,7 @@ The amplitude/2-qubit QSVM was the expected weak diversity member and received t
 Across-seed ensemble accuracy: **94.15% mean, 93.86-94.74% range**.  
 Across-seed best-single accuracy: **94.44% mean, 93.86-94.74% range**.
 
-The ensemble did not beat the best single model on mean accuracy; it trailed by 0.29 percentage points. None of the per-seed paired differences was statistically significant. Weights were not tuned against the test set to force the roadmap target.
+State both findings together: the ensemble validated the VQC-family instability concern by holding a tight 93.86-94.74% range while individual VQC variants ranged from 89.47% to 94.74%, and it statistically tied the strongest individual model rather than beating it (94.15% versus 94.44% mean; all paired p-values > 0.56). The amplitude model remains in the required six-model ensemble, and weights were not retuned against the test set to force a win.
 
 ## Carried Phase 1 same-four-feature classical means (not rerun)
 

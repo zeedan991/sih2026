@@ -88,6 +88,7 @@ An independent review of the previous revision found several real defects — so
 
 ```
 Raw WBCD (569 × 30 features)
+   → stratified 80/20 train/test split
    → median-impute missing values
    → StandardScaler
    → SelectKBest(f_classif, k=4)   [ANOVA F-value feature SELECTION —
@@ -97,9 +98,14 @@ Raw WBCD (569 × 30 features)
                                      perimeter, worst concave points —
                                      real, clinically-named, no
                                      abstraction]
-   → MinMaxScaler to [0, π]        (quantum models only)
-   → stratified 80/20 train/test split, 5-fold CV within training set
+   → MinMaxScaler to [10⁻⁶, π-10⁻⁶] (quantum models only; clip=True)
+   → 5-fold CV within training set
 ```
+
+Every preprocessing component is fitted on training rows only. The slightly
+inward quantum range is defense-in-depth for amplitude embedding: ordinary
+training, held-out, and future live inputs cannot become an exact all-zero or
+all-π boundary vector after transformation (D-21).
 
 **Two label arrays, never one overwritten by the other** (defect #2 above):
 ```python
@@ -197,7 +203,7 @@ dev_amp = qml.device("lightning.qubit", wires=n_qubits_amp)
 def canonicalize_zero_amplitude(x):
     x = np.asarray(x, dtype=float).copy()
     if np.linalg.norm(x) == 0.0:
-        x[0] = 1.0  # exact MinMax-zero edge -> canonical |00> state (D-21)
+        x[0] = 1.0  # any direct exact-zero input -> canonical |00> (D-21)
     return x
 
 @qml.qnode(dev_amp)
@@ -207,7 +213,7 @@ def amp_kernel_circuit(x1, x2):
     proj = np.zeros((2**n_qubits_amp, 2**n_qubits_amp)); proj[0, 0] = 1
     return qml.expval(qml.Hermitian(proj, wires=range(n_qubits_amp)))
 ```
-Verified: this call succeeds. `normalize=True` handles nonzero feature rows that aren't already unit vectors; the exact all-zero row created when one patient holds all four training minima has no normalizable direction, so D-21 maps only that edge case to the canonical `|00>` vector first. `pad_with=0.0` is a documented no-op safety net here since 4 features already exactly fill a 2-qubit amplitude vector.
+Verified: this call succeeds. `normalize=True` handles nonzero feature rows that aren't already unit vectors. The general QSVM input boundary canonicalizes any exact all-zero amplitude row to `|00>` before every public fit or prediction path, including future live inference; it is not a correction tied to a known training row. In addition, the pipeline's inward `[10⁻⁶, π-10⁻⁶]` range prevents normally transformed rows from reaching that edge at all. `pad_with=0.0` is a documented no-op safety net here since 4 features already exactly fill a 2-qubit amplitude vector.
 
 **Honest note on individual performance:** measured standalone accuracy for this variant was notably lower than every other model in the ensemble (~76% vs. 93-95% for the others) on one verification run — a 2-qubit Hilbert space is small, so this is expected, not a bug. It still contributes to the ensemble's diversity, and the inverse-MSE weighting scheme (§3.6) automatically down-weights it relative to stronger models. Don't be alarmed if this specific model's individual number looks weak in your own training logs — that's the design working as intended, not something to debug.
 
@@ -249,11 +255,15 @@ Weighting: normalized inverse out-of-bag probability-MSE, spanning all 6 models.
 | Classical SVM, **same 4 features**, 3 seeds | **93.86% mean; 92.98-94.74% range** |
 
 - The earlier 20-epoch VQC quick check measured 87.43% mean with a 74.56-93.86% range. Re-running the identical seeds/splits for 100 epochs raised the mean to 91.23% and narrowed the range to 89.47-93.86%; see `decisions.md` D-20. Twenty epochs remains a regression-test budget, not a final benchmark budget.
-- The Phase 2 controlled benchmark used a stratified 200-row pool from each training split, actual bootstrap OOB probability-MSE weights, and the untouched full test split. The ensemble did **not** beat the best single model on across-seed mean accuracy: 94.15% versus 94.44% (a 0.29-point gap). It won seed 42 and trailed by one test patient on seeds 123 and 2026; all three paired tests were non-significant. Exact per-model weights and the rationale for retaining the honest result are in `decisions.md` D-22.
+- The Phase 2 controlled benchmark used a stratified 200-row pool from each training split, actual bootstrap OOB probability-MSE weights, and the untouched full test split. State both findings together: the ensemble validated the VQC-family instability concern by holding a tight 93.86-94.74% range while individual VQCs ranged from 89.47% to 94.74%, and it statistically **tied the strongest individual model rather than beating it** (94.15% versus 94.44% mean; every paired p-value > 0.56). Exact per-model weights and the rationale for retaining all six models without retuning are in `decisions.md` D-22.
 - VQC forward pass: ~5ms
 - Quantum kernel evaluation: ~7ms/pair
 - Full training kernel matrix (~455 samples): budget 3-4 minutes
 - **SHAP `KernelExplainer`, one patient — revised, measured on the actual mixed ensemble:** a VQC-only explanation is fast (~7s for 3 VQCs), but the moment a QSVM model joins the explained ensemble, cost jumps sharply — **verified: 69.6s for a 2-model (1 VQC + 1 QSVM) ensemble**, because every SHAP perturbation sample requires a fresh kernel computation against the QSVM's full background set, which is far more expensive than a VQC forward pass. For the full 6-model ensemble (4 VQC + 2 QSVM), budget on the order of a minute or more per explanation, not seconds. This changes the UI requirement: a brief loading spinner is no longer sufficient — build a real "computing explanation..." state, and consider explaining primarily against the VQC sub-ensemble by default (fast, seconds) with the full 6-model explanation as an optional "deep explanation" the user explicitly requests. Reducing the QSVM background-sample count (e.g. from 100 to 30-40) is the cheapest lever if this needs to be faster, at some cost to explanation stability.
+
+**Phase 3 implementation:** `ExplainabilityService` exposes three explicit scopes. `fast_vqc` is the default and renormalizes only the four VQC weights; `full_ensemble` uses the frozen six-model OOB weights; and `qsvm_diagnostic` isolates the two kernel models for verification. Both QSVM-inclusive scopes reject calls unless `allow_slow=True`. Combined SHAP + LIME calls emit durable `computing`, `complete`, or `failed` progress events with elapsed and expected timing, so the Phase 4 API and Phase 5 UI can present a genuine long-running state. SHAP explains scalar class-1/benign probability with the exact selected clinical names. LIME is an independent cross-check: its local slopes are multiplied by the patient's standardized displacement from its background mean before direction is compared with SHAP, avoiding an invalid slope-versus-contribution sign comparison (D-23).
+
+A controlled real-model Phase 3 verification (seed 42, four VQCs at 100 epochs, 20-row training pool, 10-row explanation background, 16 SHAP samples) succeeded for VQC-only, QSVM-only, and full-six scopes with zero SHAP additivity residual. It measured 3.41s, 7.82s, and 9.13s respectively under those intentionally small smoke-test settings. These are not replacements for D-17's production-like 69.6s result; the shipped metadata continues to warn **at least 70 seconds** for either QSVM-inclusive scope. All explainers received `mean concave points`, `worst radius`, `worst perimeter`, and `worst concave points`; no generic component names appeared. Exact inputs and attributions are recorded in `artifacts/explainability/phase3_real_model_verification.md`.
 
 **Forward-compatibility note:** `sklearn.svm.SVC(kernel="precomputed", probability=True)` (§3.4, §3.5) raises a `FutureWarning` on the pinned scikit-learn 1.9.0 — the `probability` parameter is deprecated and scheduled for removal in 1.11, in favor of wrapping with `CalibratedClassifierCV`. It still works correctly on the pinned version (verified), so this isn't an active bug — but don't casually run `pip install --upgrade scikit-learn` mid-project without checking whether this has been removed yet. If you do upgrade past 1.11, switch to `CalibratedClassifierCV(SVC(kernel="precomputed"), ensemble=False)` for probability outputs.
 

@@ -43,6 +43,8 @@ Build order deliberately front-loads the highest-risk, least-familiar piece (the
 - Because the pipeline now selects real named features instead of PCA components (`decisions.md` D-13), SHAP's `feature_names` are literally `mean concave points`, `worst radius`, `worst perimeter`, `worst concave points` (verified on this project's split) — confirm your explainability code passes these through rather than defaulting to generic `feature_0`-style labels, which is the easy way to accidentally lose this benefit
 - Confirm SHAP runs against **both** a VQC prediction and a QSVM prediction — the explainability layer should treat both quantum model types the same way
 
+**Verified 2026-08-30:** Phase 3 now has a VQC-only default, explicit slow consent for both QSVM-inclusive scopes, structured long-running progress events, SHAP additivity audits, and a LIME patient-contribution cross-check. A real fitted-ensemble smoke test succeeded for VQC-only, QSVM-only, and full-six SHAP using the exact four selected clinical names. The small verification settings completed faster than the production-like D-17 benchmark; the QSVM-inclusive contract intentionally retains its "at least 70 seconds" warning. Phase 4 API/frontend wiring has not started.
+
 ## Phase 4 — Backend + dev dashboard (Days 6–7)
 
 - FastAPI routes per `architecture.md` §4 — confirm every `/predict` response has **both** `quantum` and `classical` populated, never one omitted (`decisions.md` D-12, PRD M4). Write the test for this explicitly, not just eyeball it once.
