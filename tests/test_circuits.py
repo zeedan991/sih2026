@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as numpy
 
+from backend.data.pipeline import prepare_breast_cancer_data
 from backend.quantum.vqc_circuits import (
     DEFAULT_N_LAYERS,
     DEFAULT_N_QUBITS,
@@ -14,18 +15,12 @@ from backend.quantum.vqc_circuits import (
 
 def test_cost_decreases_during_training() -> None:
     """Guard against mixing a Torch QNode with PennyLane's optimizer (D-02)."""
-    features = numpy.array(
-        [
-            [0.10, 0.20, 0.15, 0.05],
-            [0.25, 0.10, 0.30, 0.20],
-            [0.45, 0.35, 0.40, 0.30],
-            [2.55, 2.70, 2.60, 2.75],
-            [2.80, 2.65, 2.90, 2.70],
-            [3.00, 2.90, 2.75, 3.05],
-        ],
-        dtype=float,
-    )
-    labels_pm1 = numpy.array([1, 1, 1, -1, -1, -1], dtype=float)
+    prepared = prepare_breast_cancer_data(random_state=42)
+    malignant = numpy.flatnonzero(prepared.y_train_pm1 == -1)[:3]
+    benign = numpy.flatnonzero(prepared.y_train_pm1 == 1)[:3]
+    subset = numpy.concatenate((malignant, benign))
+    features = prepared.X_train_quantum[subset]
+    labels_pm1 = prepared.y_train_pm1[subset]
 
     result = train_vqc(
         features,
