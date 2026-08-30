@@ -194,14 +194,20 @@ n_qubits_amp = 2   # NOT 4 -- AmplitudeEmbedding needs exactly 2**n_qubits
                     # would fail outright -- verified both ways.
 dev_amp = qml.device("lightning.qubit", wires=n_qubits_amp)
 
+def canonicalize_zero_amplitude(x):
+    x = np.asarray(x, dtype=float).copy()
+    if np.linalg.norm(x) == 0.0:
+        x[0] = 1.0  # exact MinMax-zero edge -> canonical |00> state (D-21)
+    return x
+
 @qml.qnode(dev_amp)
 def amp_kernel_circuit(x1, x2):
-    qml.AmplitudeEmbedding(x1, wires=range(n_qubits_amp), normalize=True, pad_with=0.0)
-    qml.adjoint(qml.AmplitudeEmbedding)(x2, wires=range(n_qubits_amp), normalize=True, pad_with=0.0)
+    qml.AmplitudeEmbedding(canonicalize_zero_amplitude(x1), wires=range(n_qubits_amp), normalize=True, pad_with=0.0)
+    qml.adjoint(qml.AmplitudeEmbedding)(canonicalize_zero_amplitude(x2), wires=range(n_qubits_amp), normalize=True, pad_with=0.0)
     proj = np.zeros((2**n_qubits_amp, 2**n_qubits_amp)); proj[0, 0] = 1
     return qml.expval(qml.Hermitian(proj, wires=range(n_qubits_amp)))
 ```
-Verified: this call succeeds (confirmed in sandbox). `normalize=True` handles the fact that raw feature values aren't already unit vectors; `pad_with=0.0` is a documented no-op safety net here since 4 features already exactly fill a 2-qubit amplitude vector.
+Verified: this call succeeds. `normalize=True` handles nonzero feature rows that aren't already unit vectors; the exact all-zero row created when one patient holds all four training minima has no normalizable direction, so D-21 maps only that edge case to the canonical `|00>` vector first. `pad_with=0.0` is a documented no-op safety net here since 4 features already exactly fill a 2-qubit amplitude vector.
 
 **Honest note on individual performance:** measured standalone accuracy for this variant was notably lower than every other model in the ensemble (~76% vs. 93-95% for the others) on one verification run — a 2-qubit Hilbert space is small, so this is expected, not a bug. It still contributes to the ensemble's diversity, and the inverse-MSE weighting scheme (§3.6) automatically down-weights it relative to stronger models. Don't be alarmed if this specific model's individual number looks weak in your own training logs — that's the design working as intended, not something to debug.
 
@@ -221,14 +227,21 @@ Verified: this call succeeds (confirmed in sandbox). `normalize=True` handles th
 1. **Full-feature** (all 30, current behavior) — the strongest, real-world classical benchmark. Verified: LogReg 98.25%.
 2. **Same-4-feature** (identical `SelectKBest` output the quantum models see) — the *fair* apples-to-apples comparison. **Verified finding, and a genuinely important one: LogReg on the same 4 features drops to 92.98% — statistically tied with the VQC's 92.98% on those same features.** A meaningful share of the "classical wins" gap in the previous revision was an artifact of classical models seeing 7.5x more input information, not a demonstrated capability gap. Report both configurations, always — this is a more honest and, frankly, more favorable-to-quantum story than only showing the full-feature comparison.
 
-Weighting: unchanged inverse-validation-MSE scheme, spanning all 6 models.
+Weighting: normalized inverse out-of-bag probability-MSE, spanning all 6 models. Each member receives its own training bootstrap; rows absent from that bootstrap determine its weight, and the held-out test set never participates in weight selection.
 
 ### 3.7 Measured performance (updated numbers, selected-feature pipeline)
 
 | Model | Verified test accuracy |
 |---|---|
-| Quantum-kernel SVM (angle) | **95.6%** |
+| Quantum-kernel SVM (angle), earlier full-data verification | **95.6%** |
 | VQC (re-upload + re-map), 100 epochs, 3 seeds | **91.23% mean; 89.47-93.86% range** |
+| Phase 2 VQC 4q/3l/CNOT, 100 epochs, 200-row train pool, 3 seeds | **91.23% mean; 90.35-92.98% range** |
+| Phase 2 VQC 3q/2l/CNOT (top 3), 100 epochs, 200-row train pool, 3 seeds | **91.81% mean; 89.47-92.98% range** |
+| Phase 2 VQC 4q/2l/CZ, 100 epochs, 200-row train pool, 3 seeds | **91.52% mean; 90.35-92.98% range** |
+| Phase 2 VQC 4q/3l/CZ reversed, 100 epochs, 200-row train pool, 3 seeds | **92.11% mean; 90.35-94.74% range** |
+| Phase 2 QSVM angle/4q, 200-row train pool, 3 seeds | **94.44% mean; 93.86-94.74% range** |
+| Phase 2 QSVM amplitude/2q, 200-row train pool, 3 seeds | **73.98% mean; 72.81-75.44% range** |
+| Phase 2 six-model OOB-weighted ensemble, 200-row train pool, 3 seeds | **94.15% mean; 93.86-94.74% range** |
 | Classical, full 30 features (LogReg) | 98.25% |
 | Classical LogReg, **same 4 features**, 3 seeds | **93.57% mean; 92.98-93.86% range** |
 | Classical Random Forest, **same 4 features**, 3 seeds | **93.27% mean; 92.11-93.86% range** |
@@ -236,6 +249,7 @@ Weighting: unchanged inverse-validation-MSE scheme, spanning all 6 models.
 | Classical SVM, **same 4 features**, 3 seeds | **93.86% mean; 92.98-94.74% range** |
 
 - The earlier 20-epoch VQC quick check measured 87.43% mean with a 74.56-93.86% range. Re-running the identical seeds/splits for 100 epochs raised the mean to 91.23% and narrowed the range to 89.47-93.86%; see `decisions.md` D-20. Twenty epochs remains a regression-test budget, not a final benchmark budget.
+- The Phase 2 controlled benchmark used a stratified 200-row pool from each training split, actual bootstrap OOB probability-MSE weights, and the untouched full test split. The ensemble did **not** beat the best single model on across-seed mean accuracy: 94.15% versus 94.44% (a 0.29-point gap). It won seed 42 and trailed by one test patient on seeds 123 and 2026; all three paired tests were non-significant. Exact per-model weights and the rationale for retaining the honest result are in `decisions.md` D-22.
 - VQC forward pass: ~5ms
 - Quantum kernel evaluation: ~7ms/pair
 - Full training kernel matrix (~455 samples): budget 3-4 minutes
