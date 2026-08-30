@@ -1,0 +1,31 @@
+# Verified compatible together in a clean virtualenv, 2026-08-23.
+# Installed and smoke-tested end-to-end (data load -> PCA -> VQC training ->
+# SHAP explanation) in the same environment -- see architecture.md sec 2-3.
+#
+# NOTE: torch is intentionally NOT included. The core pipeline doesn't need
+# it (see decisions.md D-02). Only add it if you deliberately build a
+# PyTorch-fused component later (e.g. a CNN feature extractor for the
+# multimodal bonus phase) -- and if you do, install the CPU-only build to
+# avoid pulling ~2.3GB of unnecessary CUDA/Triton packages:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+pennylane==0.45.1
+pennylane-lightning==0.45.0
+scikit-learn==1.9.0
+xgboost==3.4.1
+shap==0.52.0
+lime==0.2.0.1
+pandas==3.0.5
+numpy==2.5.2
+scipy==1.18.1
+matplotlib==3.11.1
+streamlit==1.62.0
+fastapi==0.141.1
+uvicorn==0.52.4
+
+# --- Testing only (not needed to run the app itself) ---
+# FastAPI's TestClient (used for pytest API tests per AGENTS.md's test
+# commands) requires this in the version pinned above -- found during
+# testing, not documented by FastAPI itself in an obvious place, so
+# noting it here to save you the same debugging.
+httpx2==2.12.0
