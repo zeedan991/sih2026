@@ -218,6 +218,19 @@ def test_health_and_real_patient_catalog_contracts() -> None:
     assert len(patients.json()["patients"][0]["features"]) == 30
 
 
+def test_fastapi_serves_the_judge_frontend_from_the_same_origin() -> None:
+    with _client() as client:
+        page = client.get("/")
+        script = client.get("/static/app.js")
+
+    assert page.status_code == 200
+    assert "Q-TRACE" in page.text
+    assert 'id="quantum-progress"' in page.text
+    assert 'id="classical-progress"' in page.text
+    assert script.status_code == 200
+    assert 'fetchJson("/predict"' in script.text
+
+
 def test_predict_always_returns_quantum_and_both_classical_configurations() -> None:
     with _client() as client:
         response = client.post("/predict", json={"features": FEATURES})

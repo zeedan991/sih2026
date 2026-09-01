@@ -1,1 +1,49 @@
-# Container orchestration is implemented in Roadmap Phase 6.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      QML_MODEL_SEED: "42"
+      QML_VQC_EPOCHS: "100"
+      QML_TRAINING_LIMIT: "20"
+      QML_EXPLANATION_BACKGROUND_SIZE: "50"
+      QML_SHAP_NSAMPLES: "60"
+      QML_LIME_NUM_SAMPLES: "1000"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import json,urllib.request;
+          p=json.load(urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=3));
+          raise SystemExit(0 if p.get('models_loaded') else 1)
+      interval: 10s
+      timeout: 4s
+      start_period: 120s
+      retries: 12
+    restart: unless-stopped
+
+  dev-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      - streamlit
+      - run
+      - dev-dashboard/app.py
+      - --server.address=0.0.0.0
+      - --server.port=8501
+      - --server.headless=true
+      - --browser.gatherUsageStats=false
+    environment:
+      QML_API_BASE_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
