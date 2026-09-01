@@ -43,7 +43,7 @@ Build order deliberately front-loads the highest-risk, least-familiar piece (the
 - Because the pipeline now selects real named features instead of PCA components (`decisions.md` D-13), SHAP's `feature_names` are literally `mean concave points`, `worst radius`, `worst perimeter`, `worst concave points` (verified on this project's split) — confirm your explainability code passes these through rather than defaulting to generic `feature_0`-style labels, which is the easy way to accidentally lose this benefit
 - Confirm SHAP runs against **both** a VQC prediction and a QSVM prediction — the explainability layer should treat both quantum model types the same way
 
-**Verified 2026-08-30:** Phase 3 now has a VQC-only default, explicit slow consent for both QSVM-inclusive scopes, structured long-running progress events, SHAP additivity audits, and a LIME patient-contribution cross-check. A real fitted-ensemble smoke test succeeded for VQC-only, QSVM-only, and full-six SHAP using the exact four selected clinical names. The small verification settings completed faster than the production-like D-17 benchmark; the QSVM-inclusive contract intentionally retains its "at least 70 seconds" warning. Phase 4 API/frontend wiring has not started.
+**Verified 2026-08-30:** Phase 3 now has a VQC-only default, explicit slow consent for both QSVM-inclusive scopes, structured long-running progress events, SHAP additivity audits, and a LIME patient-contribution cross-check. A real fitted-ensemble smoke test succeeded for VQC-only, QSVM-only, and full-six SHAP using the exact four selected clinical names. The small verification settings completed faster than the production-like D-17 benchmark; the QSVM-inclusive contract intentionally retains its "at least 70 seconds" warning.
 
 ## Phase 4 — Backend + dev dashboard (Days 6–7)
 
@@ -51,17 +51,23 @@ Build order deliberately front-loads the highest-risk, least-familiar piece (the
 - Streamlit dev dashboard hitting the same API (internal use only — `decisions.md` D-04)
 - `pytest` coverage for the API routes
 
+**Verified 2026-09-01:** FastAPI now serves the model runtime and the judge-facing frontend from one origin. Contract tests explicitly require the quantum result and both classical configurations on every prediction. `/explain` is attribution-only under D-23. The Streamlit console is an HTTP-only client of this API, so it cannot drift into a second model runtime.
+
 ## Phase 5 — Judge-facing frontend (Days 8–9)
 
 - Build against the design system in `architecture.md` §6 — the two-dial layout (quantum indigo / classical teal, equal size, always both populated) is the actual spec here, not a style preference. See the rendered mockup referenced in `architecture.md` §6.1.
 - Implement the disagreement banner (PRD S5) — cheap to build, and it's a genuinely honest feature: when quantum and classical predict different labels, say so rather than silently picking one
 - This is a small number of screens (upload/select → results with both dials → explanation), not a large app — resist scope growth here
 
+**Verified 2026-09-01:** A live browser run rendered equal 582 px result cards with the required indigo and teal tokens, triggered the amber banner on a genuine model disagreement, held a real elapsed-time explanation state through computation, and rendered four real-name SHAP/LIME attribution rows without a competing confidence value. The full six-model explanation is a visibly slower, explicitly confirmed opt-in. Browser console errors and warnings were empty.
+
 ## Phase 6 — Integration, Docker, rehearsal (Day 10)
 
 - `docker compose up` from a clean checkout, tested by someone who didn't write the code
 - Full rehearsal with **real, non-hardcoded inputs** — pick 3–4 real WBCD test rows in advance you're comfortable narrating, but run the actual pipeline live, not a canned screen
 - Rehearse the "why not just classical ML" answer (`decisions.md` D-07) out loud, as a team, at least once
+
+**Engineering verification 2026-09-01:** The full suite passes (63 tests), `pip check` is clean, Python compilation succeeds, both local applications return HTTP 200, and a real model/browser flow passes. Dockerfile and Compose behavior are contract-tested, but the clean image build remains pending because Docker is not installed on the verification host. Human demo rehearsal remains a team activity rather than a code task.
 
 **By here you have a complete, honest, working core.** Everything past this point is optional and time-boxed.
 
