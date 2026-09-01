@@ -28,6 +28,8 @@ The judge-facing application was exercised through the in-app browser against th
 9. Selected the full-ensemble option and confirmed the `70 seconds or longer` disclosure and explicit request label.
 10. Checked browser console warnings/errors: none.
 
+The Streamlit console was also opened in-browser against the live API. It reported 6 quantum members and 8 classical fits, loaded the held-out catalog, and completed a hybrid prediction showing the quantum result, full-feature classical result, same-four comparison, and disagreement alert. Its browser console also had no warnings or errors.
+
 ## Automated verification
 
 ```text
@@ -41,4 +43,3 @@ The warnings were three upstream SHAP/Matplotlib pending deprecations, the expec
 ## Container limitation
 
 The Dockerfile and Compose contracts are covered by tests, but the image was not built on this machine because the Docker CLI is not installed (`docker` is not recognized). A clean `docker compose up --build` remains the one host-dependent verification step.
-
