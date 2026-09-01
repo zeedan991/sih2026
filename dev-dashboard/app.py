@@ -104,7 +104,7 @@ with st.sidebar:
         st.stop()
     else:
         st.info("Models are training. Refresh in about a minute.")
-        if st.button("Refresh status", use_container_width=True):
+        if st.button("Refresh status", width="stretch"):
             st.rerun()
         st.stop()
 
@@ -139,9 +139,9 @@ with prediction_tab:
             "raw value": selected_patient["selected_values"],
         }
     )
-    st.dataframe(selected_frame, hide_index=True, use_container_width=True)
+    st.dataframe(selected_frame, hide_index=True, width="stretch")
 
-    if st.button("Run hybrid prediction", type="primary", use_container_width=True):
+    if st.button("Run hybrid prediction", type="primary", width="stretch"):
         with st.spinner("Running all six quantum members and both classical views…"):
             st.session_state["dev_prediction"] = api_json(
                 "/predict",
@@ -177,7 +177,7 @@ with prediction_tab:
                 st.dataframe(
                     pd.DataFrame(quantum["per_model"]),
                     hide_index=True,
-                    use_container_width=True,
+                    width="stretch",
                 )
 
         with classical_column:
@@ -211,7 +211,7 @@ with prediction_tab:
             )
         if st.button(
             "Compute deep attribution" if deep else "Compute fast attribution",
-            use_container_width=True,
+            width="stretch",
         ):
             expected = "70 seconds or longer" if deep else "about 7 seconds"
             started = time.perf_counter()
@@ -250,7 +250,7 @@ with prediction_tab:
                 }
             )
             st.caption(f'Attribution scope: `{explanation["scope"]}`')
-            st.dataframe(explanation_frame, hide_index=True, use_container_width=True)
+            st.dataframe(explanation_frame, hide_index=True, width="stretch")
             st.bar_chart(
                 explanation_frame.set_index("feature")[["SHAP", "LIME"]],
                 horizontal=True,
@@ -263,7 +263,7 @@ with benchmark_tab:
     for configuration, detail in baseline_payload["configurations"].items():
         st.subheader(configuration.replace("_", " ").title())
         frame = pd.DataFrame(detail["models"]).T.reset_index(names="model")
-        st.dataframe(frame, hide_index=True, use_container_width=True)
+        st.dataframe(frame, hide_index=True, width="stretch")
     with st.expander("Verified three-seed quantum record"):
         st.json(metrics_payload["quantum"])
 
