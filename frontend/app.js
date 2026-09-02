@@ -19,6 +19,7 @@ const state = {
 const elements = {
   serviceState: document.querySelector("#service-state"),
   serviceStateLabel: document.querySelector("#service-state-label"),
+  runtimeContext: document.querySelector("#runtime-context"),
   patientSelect: document.querySelector("#patient-select"),
   patientHelp: document.querySelector("#patient-help"),
   selectedFeatureChips: document.querySelector("#selected-feature-chips"),
@@ -145,11 +146,17 @@ async function checkHealth() {
     state.health = health;
     if (health.models_loaded) {
       setServiceState("ready", "Model service ready");
-      if (state.healthTimer) {
+      const config = health.runtime_configuration;
+      if (config) {
+        elements.runtimeContext.textContent = `Live runtime: ${config.quantum_training_limit} quantum training rows, ${config.classical_training_rows} classical training rows · ${config.vqc_epochs} VQC epochs · seed ${config.seed}. Benchmark evidence below is a separate three-seed, 200-row quantum run.`;
+      }
+      if (!state.catalog) await loadPatients();
+      // Keep polling after a transient catalog failure so a page reload is not
+      // the only recovery path once the models themselves are ready.
+      if (state.catalog && state.healthTimer) {
         window.clearInterval(state.healthTimer);
         state.healthTimer = null;
       }
-      if (!state.catalog) await loadPatients();
       return;
     }
     if (health.status === "error") {

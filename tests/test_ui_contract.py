@@ -85,3 +85,18 @@ def test_attribution_measurements_come_from_the_raw_patient_record() -> None:
     assert "state.patient.selected_values[selectedIndex]" in render
     assert "Raw ${formatFeatureValue(featureValue)}" in render
     assert "payload.top_features" not in render
+
+
+def test_live_training_budget_is_not_presented_as_the_saved_benchmark() -> None:
+    html = (PROJECT_ROOT / "frontend/index.html").read_text(encoding="utf-8")
+    source = (PROJECT_ROOT / "frontend/app.js").read_text(encoding="utf-8")
+    assert 'id="runtime-context"' in html
+    assert "config.quantum_training_limit" in source
+    assert "config.classical_training_rows" in source
+    assert "separate three-seed, 200-row quantum run" in source
+
+
+def test_catalog_failure_does_not_stop_health_retry_polling() -> None:
+    source = (PROJECT_ROOT / "frontend/app.js").read_text(encoding="utf-8")
+    assert "if (state.catalog && state.healthTimer)" in source
+    assert source.index("await loadPatients()") < source.index("window.clearInterval(state.healthTimer)")

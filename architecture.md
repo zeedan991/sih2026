@@ -273,13 +273,15 @@ A controlled real-model Phase 3 verification (seed 42, four VQCs at 100 epochs, 
 
 | Endpoint | Method | Input | Output |
 |---|---|---|---|
-| `/health` | GET | — | `{status, models_loaded}` |
+| `/health` | GET | — | `{status, models_loaded, quantum_members, classical_models, selected_features, runtime_configuration: {seed, vqc_epochs, quantum_training_limit, classical_training_rows}, error?}` — distinguishes the live demo from the separate saved benchmark. |
 | `/predict` | POST | `{features: float[30]}` | `{quantum: {label, confidence, per_model}, classical: {full_feature: {...}, same_4_feature: {...}}}` |
 | `/explain` | POST | `{features: float[30], model, allow_slow: bool = false}` | `{feature_names, shap_values, top_features, scope: "vqc_fast"\|"full_ensemble"}` — never includes a standalone confidence/probability field (D-23). This response supplies attribution only; the frontend anchors it to the confidence already shown from `/predict`, never renders a second number. `allow_slow=false` (default) explains the fast VQC sub-ensemble; `allow_slow=true` explains the full 6-model ensemble, which naturally matches `/predict`'s number exactly since it explains that literal prediction. `feature_names` are always real clinical names, never PC1-style labels. |
 | `/baselines` | GET | — | Full comparison table: both quantum types x both classical configurations |
 | `/metrics` | GET | — | Ensemble vs. single-model, confusion matrix, ROC-AUC, quantum-vs-classical head-to-head (both classical configs) |
 
 `quantum` and `classical` are always both present and fully populated (D-12). `classical` now has two sub-objects, not one — both always populated too (D-14).
+
+**Request safeguards (2026-09-02):** JSON bodies are limited to 16 KiB before parsing, including chunked requests (HTTP 413 if exceeded). One prediction or explanation runs per API process; competing inference requests receive HTTP 429 with `Retry-After: 2` instead of waiting behind a long explanation. Health, patient catalog, and benchmark metadata remain accessible. Both clients display the error and allow a manual retry; successful response shapes above are unchanged. This is a local research demo, not an authenticated public clinical service.
 
 ---
 

@@ -6,6 +6,7 @@ import math
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from threading import BoundedSemaphore
 from typing import Any, Literal, Protocol
 
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -16,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.runtime import ModelRuntime, RuntimeNotReady
+from backend.request_limits import RequestSizeLimit
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -60,12 +62,20 @@ class ExplainRequest(FeatureRequest):
     allow_slow: bool = False
 
 
+class RuntimeConfiguration(BaseModel):
+    seed: int
+    vqc_epochs: int
+    quantum_training_limit: int
+    classical_training_rows: int
+
+
 class HealthResponse(BaseModel):
     status: str
     models_loaded: bool
     quantum_members: int
     classical_models: int
     selected_features: list[str]
+    runtime_configuration: RuntimeConfiguration
     error: str | None = None
 
 
@@ -178,6 +188,9 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     application.state.runtime = active_runtime
+    # One expensive operation per process. Do not fill the HTTP thread pool
+    # with requests waiting behind a 70s+ explanation; health stays available.
+    inference_slot = BoundedSemaphore(1)
     allowed_origins = [
         origin.strip()
         for origin in os.getenv(
@@ -194,6 +207,7 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
         allow_methods=["GET", "POST"],
         allow_headers=["Content-Type"],
     )
+    application.add_middleware(RequestSizeLimit)
 
     @application.exception_handler(RequestValidationError)
     async def validation_error_response(
@@ -217,6 +231,18 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
             return callable_(*args, **kwargs)
         except RuntimeNotReady as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
+
+    def inference_call(callable_: Any, *args: Any, **kwargs: Any) -> Any:
+        if not inference_slot.acquire(blocking=False):
+            raise HTTPException(
+                status_code=429,
+                detail="Another prediction or explanation is running. Please retry shortly.",
+                headers={"Retry-After": "2"},
+            )
+        try:
+            return ready_call(callable_, *args, **kwargs)
+        finally:
+            inference_slot.release()
 
     @application.get(
         "/health",
@@ -243,7 +269,7 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
         tags=["inference"],
     )
     def predict(request: FeatureRequest) -> dict[str, Any]:
-        return ready_call(active_runtime.predict_payload, request.features)
+        return inference_call(active_runtime.predict_payload, request.features)
 
     @application.post(
         "/explain",
@@ -253,7 +279,7 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
     def explain(request: ExplainRequest) -> dict[str, Any]:
         # ``model`` is deliberately constrained to quantum.  Scope is selected
         # only by allow_slow, matching architecture section 4 and D-23.
-        return ready_call(
+        return inference_call(
             active_runtime.explain_payload,
             request.features,
             allow_slow=request.allow_slow,

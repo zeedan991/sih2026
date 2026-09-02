@@ -241,6 +241,12 @@ class ModelRuntime:
                     self.data.selected_feature_names.tolist() if ready else []
                 ),
                 "error": self._error,
+                "runtime_configuration": {
+                    "seed": self.seed,
+                    "vqc_epochs": self.vqc_epochs,
+                    "quantum_training_limit": self.training_limit,
+                    "classical_training_rows": int(self.data.y_train.size) if ready else 0,
+                },
             }
 
     def predict_payload(self, features: list[float]) -> dict[str, Any]:

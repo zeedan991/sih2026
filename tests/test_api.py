@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from typing import Any
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
+import json
 
 from fastapi.testclient import TestClient
 
@@ -39,6 +42,10 @@ class StubRuntime:
             "models_loaded": True,
             "quantum_members": 6,
             "classical_models": 8,
+            "runtime_configuration": {
+                "seed": 42, "vqc_epochs": 100,
+                "quantum_training_limit": 20, "classical_training_rows": 455,
+            },
             "selected_features": [
                 "mean concave points",
                 "worst radius",
@@ -212,6 +219,7 @@ def test_health_and_real_patient_catalog_contracts() -> None:
 
     assert health.status_code == 200
     assert health.json()["models_loaded"] is True
+    assert health.json()["runtime_configuration"]["quantum_training_limit"] == 20
     assert patients.status_code == 200
     assert len(patients.json()["feature_names"]) == 30
     assert len(patients.json()["selected_feature_names"]) == 4
@@ -353,3 +361,76 @@ def test_inference_returns_service_unavailable_while_models_load() -> None:
     assert health.json()["status"] == "loading"
     assert prediction.status_code == 503
     assert prediction.json()["detail"] == "models are still loading"
+
+
+def test_oversized_json_is_rejected_before_model_work() -> None:
+    body = " " * 20_000 + json.dumps({"features": FEATURES})
+    with _client() as client:
+        response = client.post("/predict", content=body, headers={"content-type": "application/json"})
+    assert response.status_code == 413
+
+
+def test_chunked_body_cannot_bypass_request_size_limit() -> None:
+    chunks = iter([b" " * 9_000, b" " * 9_000, json.dumps({"features": FEATURES}).encode()])
+    with _client() as client:
+        response = client.post("/predict", content=chunks, headers={"content-type": "application/json"})
+    assert response.status_code == 413
+
+
+def test_busy_explanation_rejects_new_inference_without_blocking_health() -> None:
+    entered, release = Event(), Event()
+
+    class BusyRuntime(StubRuntime):
+        def explain_payload(self, features: list[float], *, allow_slow: bool) -> dict[str, Any]:
+            entered.set()
+            assert release.wait(timeout=5), "test must release the simulated explanation"
+            return super().explain_payload(features, allow_slow=allow_slow)
+
+    with TestClient(create_app(runtime=BusyRuntime())) as client, ThreadPoolExecutor(max_workers=1) as pool:
+        first = pool.submit(client.post, "/explain", json={"features": FEATURES})
+        try:
+            assert entered.wait(timeout=2)
+            competing = client.post("/predict", json={"features": FEATURES})
+            health = client.get("/health")
+            assert competing.status_code == 429
+            assert competing.headers["retry-after"] == "2"
+            assert health.status_code == 200
+        finally:
+            release.set()
+        assert first.result(timeout=2).status_code == 200
+        assert client.post("/predict", json={"features": FEATURES}).status_code == 200
+
+
+def test_inference_slot_is_released_after_a_runtime_error() -> None:
+    class FlakyRuntime(StubRuntime):
+        calls = 0
+
+        def predict_payload(self, features: list[float]) -> dict[str, Any]:
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeNotReady("models are still loading")
+            return super().predict_payload(features)
+
+    with TestClient(create_app(runtime=FlakyRuntime())) as client:
+        assert client.post("/predict", json={"features": FEATURES}).status_code == 503
+        assert client.post("/predict", json={"features": FEATURES}).status_code == 200
+
+
+def test_real_runtime_summary_uses_correct_label_strings() -> None:
+    from backend.runtime import _prediction_summary
+
+    for probability, label in ((0.0, "malignant"), (0.49, "malignant"), (0.5, "benign"), (1.0, "benign")):
+        result = _prediction_summary(probability, model_name="regression", feature_count=4)
+        assert result["label"] == label
+        assert result["confidence"] == max(probability, 1.0 - probability)
+
+
+def test_health_reports_actual_runtime_configuration_before_training() -> None:
+    from backend.runtime import ModelRuntime
+
+    runtime = ModelRuntime()
+    config = runtime.health_payload()["runtime_configuration"]
+    assert config["seed"] == runtime.seed
+    assert config["vqc_epochs"] == runtime.vqc_epochs
+    assert config["quantum_training_limit"] == runtime.training_limit
+    assert config["classical_training_rows"] == 0

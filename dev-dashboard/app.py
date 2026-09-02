@@ -41,8 +41,8 @@ def api_json(
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"API {error.code}: {detail}") from error
-    except urllib.error.URLError as error:
-        raise RuntimeError(f"API unavailable at {API_BASE_URL}: {error.reason}") from error
+    except (urllib.error.URLError, TimeoutError) as error:
+        raise RuntimeError(f"API unavailable at {API_BASE_URL}: {getattr(error, 'reason', error)}") from error
 
 
 def percentage(value: float) -> str:
@@ -99,6 +99,13 @@ with st.sidebar:
         st.success("Models ready")
         st.metric("Quantum members", health["quantum_members"])
         st.metric("Classical fits", health["classical_models"])
+        runtime_config = health["runtime_configuration"]
+        st.caption(
+            f"Live training: {runtime_config['quantum_training_limit']} quantum rows / "
+            f"{runtime_config['classical_training_rows']} classical rows; "
+            f"{runtime_config['vqc_epochs']} VQC epochs, seed {runtime_config['seed']}. "
+            "The saved three-seed benchmark uses a separate 200-row quantum pool."
+        )
     elif health["status"] == "error":
         st.error(health.get("error") or "Model loading failed")
         st.stop()
@@ -133,6 +140,11 @@ with prediction_tab:
             + (" · model disagreement" if patient["has_disagreement"] else "")
         ),
     )
+    previous_patient = st.session_state.get("dev_patient")
+    if previous_patient and previous_patient["id"] != selected_patient["id"]:
+        for key in ("dev_prediction", "dev_patient", "dev_explanation"):
+            st.session_state.pop(key, None)
+        st.session_state["dev_deep"] = False
     selected_frame = pd.DataFrame(
         {
             "feature": catalog["selected_feature_names"],
@@ -142,14 +154,18 @@ with prediction_tab:
     st.dataframe(selected_frame, hide_index=True, width="stretch")
 
     if st.button("Run hybrid prediction", type="primary", width="stretch"):
-        with st.spinner("Running all six quantum members and both classical views…"):
-            st.session_state["dev_prediction"] = api_json(
-                "/predict",
-                method="POST",
-                payload={"features": selected_patient["features"]},
-            )
-            st.session_state["dev_patient"] = selected_patient
-            st.session_state.pop("dev_explanation", None)
+        for key in ("dev_prediction", "dev_patient", "dev_explanation"):
+            st.session_state.pop(key, None)
+        try:
+            with st.spinner("Running all six quantum members and both classical views…"):
+                st.session_state["dev_prediction"] = api_json(
+                    "/predict",
+                    method="POST",
+                    payload={"features": selected_patient["features"]},
+                )
+                st.session_state["dev_patient"] = selected_patient
+        except RuntimeError as error:
+            st.error(str(error))
 
     prediction = st.session_state.get("dev_prediction")
     current_patient = st.session_state.get("dev_patient")
@@ -202,8 +218,13 @@ with prediction_tab:
         st.subheader("Explain the quantum attribution")
         deep = st.toggle(
             "Use full six-model explanation",
-            help="Off: VQC-only, typically ~7s. On: includes QSVMs, typically 70s+.",
+            key="dev_deep",
+            help="Off: VQC-only, approximately 7–30s. On: includes QSVMs, typically 70s+.",
         )
+        previous_explanation = st.session_state.get("dev_explanation")
+        selected_scope = "full_ensemble" if deep else "vqc_fast"
+        if previous_explanation and previous_explanation["scope"] != selected_scope:
+            st.session_state.pop("dev_explanation", None)
         if deep:
             st.warning(
                 "Deep mode recomputes quantum kernels for each perturbation and may "
@@ -213,7 +234,8 @@ with prediction_tab:
             "Compute deep attribution" if deep else "Compute fast attribution",
             width="stretch",
         ):
-            expected = "70 seconds or longer" if deep else "about 7 seconds"
+            expected = "70 seconds or longer" if deep else "approximately 7–30 seconds"
+            st.session_state.pop("dev_explanation", None)
             started = time.perf_counter()
             with st.status(
                 f"Computing explanation… expected {expected}",
@@ -222,21 +244,25 @@ with prediction_tab:
                 st.write(
                     "SHAP and LIME are evaluating the same selected clinical features."
                 )
-                explanation = api_json(
-                    "/explain",
-                    method="POST",
-                    payload={
-                        "features": current_patient["features"],
-                        "model": "quantum",
-                        "allow_slow": deep,
-                    },
-                )
-                st.session_state["dev_explanation"] = explanation
-                status.update(
-                    label=f"Attribution complete in {time.perf_counter() - started:.1f}s",
-                    state="complete",
-                    expanded=False,
-                )
+                try:
+                    explanation = api_json(
+                        "/explain",
+                        method="POST",
+                        payload={
+                            "features": current_patient["features"],
+                            "model": "quantum",
+                            "allow_slow": deep,
+                        },
+                    )
+                    st.session_state["dev_explanation"] = explanation
+                    status.update(
+                        label=f"Attribution complete in {time.perf_counter() - started:.1f}s",
+                        state="complete",
+                        expanded=False,
+                    )
+                except RuntimeError as error:
+                    status.update(label="Attribution could not complete", state="error")
+                    st.error(str(error))
 
         explanation = st.session_state.get("dev_explanation")
         if explanation:
@@ -257,8 +283,12 @@ with prediction_tab:
             )
 
 with benchmark_tab:
-    baseline_payload = api_json("/baselines")
-    metrics_payload = api_json("/metrics")
+    try:
+        baseline_payload = api_json("/baselines")
+        metrics_payload = api_json("/metrics")
+    except RuntimeError as error:
+        st.error(str(error))
+        st.stop()
     st.info(metrics_payload["positioning"])
     for configuration, detail in baseline_payload["configurations"].items():
         st.subheader(configuration.replace("_", " ").title())
