@@ -51,3 +51,37 @@ def test_frontend_explanation_is_attribution_only_with_explicit_slow_opt_in() ->
     assert "benign_probability" not in source[source.index("function renderExplanation") :]
     assert "70 seconds or longer" in source
     assert "forceDisagreement" in source
+
+
+def test_clinical_workspace_preserves_the_complete_dom_binding_contract() -> None:
+    import re
+
+    html = (PROJECT_ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    source = (PROJECT_ROOT / "frontend" / "app.js").read_text(encoding="utf-8")
+    ids = re.findall(r'id="([^"]+)"', html)
+    assert len(ids) == len(set(ids)), "UI IDs must be unique"
+    for selector_id in re.findall(r'querySelector\("#([^"]+)"\)', source):
+        assert selector_id in ids, f"Missing DOM binding: {selector_id}"
+    assert 'class="clinical-workspace"' in html
+    assert 'class="hero"' not in html
+    assert "Research use only" in html
+    assert "Source+Sans+3" in html
+
+
+def test_patient_and_scope_are_locked_during_async_requests() -> None:
+    source = (PROJECT_ROOT / "frontend" / "app.js").read_text(encoding="utf-8")
+
+    assert "state.isBusy" in source
+    assert "elements.patientSelect.disabled = busy" in source
+    assert "option.disabled = busy" in source
+    assert "generation === state.generation" in source
+    assert "selectExplanationScope(false)" in source
+
+
+def test_attribution_measurements_come_from_the_raw_patient_record() -> None:
+    source = (PROJECT_ROOT / "frontend" / "app.js").read_text(encoding="utf-8")
+    render = source[source.index("function renderExplanation"):source.index("async function runExplanation")]
+
+    assert "state.patient.selected_values[selectedIndex]" in render
+    assert "Raw ${formatFeatureValue(featureValue)}" in render
+    assert "payload.top_features" not in render

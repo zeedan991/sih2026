@@ -12,6 +12,8 @@ const state = {
   deepExplanation: false,
   healthTimer: null,
   explanationTimer: null,
+  isBusy: false,
+  generation: 0,
 };
 
 const elements = {
@@ -25,6 +27,9 @@ const elements = {
   analysisLoading: document.querySelector("#analysis-loading"),
   errorBanner: document.querySelector("#error-banner"),
   resultsSection: document.querySelector("#results-section"),
+  resultsEmpty: document.querySelector("#results-empty"),
+  recordId: document.querySelector("#record-id"),
+  resultRecordId: document.querySelector("#result-record-id"),
   explainSection: document.querySelector("#explain-section"),
   referenceLabel: document.querySelector("#reference-label"),
   disagreementBanner: document.querySelector("#disagreement-banner"),
@@ -104,6 +109,21 @@ function clearError() {
   elements.errorBanner.textContent = "";
 }
 
+function setBusy(busy) {
+  state.isBusy = busy;
+  elements.patientSelect.disabled = busy || !state.catalog;
+  elements.predictButton.disabled = busy || !state.patient;
+  elements.explainButton.disabled = busy || !state.prediction;
+  elements.scopeOptions.forEach((option) => { option.disabled = busy; });
+  elements.predictButton.querySelector("span").textContent = busy
+    ? "Analysis in progress…"
+    : "Run hybrid analysis";
+}
+
+function studyRecordId(patient) {
+  return `WBCD-${String(patient.id).padStart(3, "0")}`;
+}
+
 function setServiceState(status, label) {
   elements.serviceState.dataset.state = status;
   elements.serviceStateLabel.textContent = label;
@@ -124,7 +144,7 @@ async function checkHealth() {
     const health = await fetchJson("/health");
     state.health = health;
     if (health.models_loaded) {
-      setServiceState("ready", "Models ready · 6Q + 8C");
+      setServiceState("ready", "Model service ready");
       if (state.healthTimer) {
         window.clearInterval(state.healthTimer);
         state.healthTimer = null;
@@ -140,7 +160,7 @@ async function checkHealth() {
     }
     setServiceState("loading", "Training models · please wait");
     elements.patientHelp.textContent =
-      "The service is fitting four 100-epoch VQCs and two QSVMs. This first startup usually takes about a minute.";
+      "Preparing four 100-epoch VQCs and two quantum SVMs. First startup can take a few minutes.";
   } catch (error) {
     setServiceState("error", "Service unavailable");
     elements.patientHelp.textContent = "Start FastAPI on port 8000, then keep this page open.";
@@ -153,14 +173,14 @@ async function loadPatients() {
     state.catalog = await fetchJson("/patients?limit=12");
     elements.patientSelect.innerHTML = state.catalog.patients
       .map((patient, index) => {
-        const suffix = patient.has_disagreement ? " · known model disagreement" : "";
-        return `<option value="${index}">${escapeHtml(patient.name)}${suffix}</option>`;
+        const suffix = patient.has_disagreement ? " · comparison case" : "";
+        return `<option value="${index}">${escapeHtml(studyRecordId(patient))}${suffix}</option>`;
       })
       .join("");
     elements.patientSelect.disabled = false;
     elements.predictButton.disabled = false;
     elements.patientHelp.textContent =
-      "Real held-out row · ground truth appears only after the model response.";
+      "A real held-out study record. The reference label is concealed until analysis completes.";
     renderSelectedPatient(0);
     renderSelectedFeatureList();
     activateRail("select");
@@ -179,6 +199,7 @@ function renderSelectedFeatureList() {
 function renderSelectedPatient(index) {
   if (!state.catalog) return;
   state.patient = state.catalog.patients[index];
+  elements.recordId.textContent = studyRecordId(state.patient);
   elements.selectedFeatureChips.innerHTML = state.catalog.selected_feature_names
     .map(
       (name, featureIndex) => `
@@ -192,14 +213,18 @@ function renderSelectedPatient(index) {
 }
 
 function resetResultForPatientChange() {
+  state.generation += 1;
   state.prediction = null;
   state.explanation = null;
+  elements.resultsEmpty.hidden = false;
   elements.resultsSection.hidden = true;
   elements.explainSection.hidden = true;
   elements.explanationResult.hidden = true;
   elements.explanationLoading.hidden = true;
   elements.disagreementBanner.hidden = true;
   elements.agreementNote.hidden = true;
+  selectExplanationScope(false);
+  clearError();
   activateRail("select");
 }
 
@@ -222,7 +247,7 @@ function animateNumericPercent(element, target) {
     element.textContent = formatPercent(target);
     return;
   }
-  const duration = 1050;
+  const duration = 650;
   const started = performance.now();
   const tick = (now) => {
     const progress = Math.min(1, (now - started) / duration);
@@ -250,6 +275,7 @@ function renderPrediction(payload) {
   const sameFour = payload.classical.same_4_feature;
 
   elements.referenceLabel.textContent = labelCase(state.patient.true_label);
+  elements.resultRecordId.textContent = studyRecordId(state.patient);
   setDial(elements.quantumProgress, elements.quantumConfidence, quantum.confidence);
   setDial(elements.classicalProgress, elements.classicalConfidence, classical.confidence);
   elements.quantumLabel.textContent = labelCase(quantum.label);
@@ -264,51 +290,56 @@ function renderPrediction(payload) {
       (member) => `
         <div class="member-row">
           <span title="${escapeHtml(member.name)}">${escapeHtml(member.name)}</span>
-          <span class="member-kind">${escapeHtml(member.paradigm)} · ${(member.weight * 100).toFixed(1)}w</span>
+          <span class="member-kind">${escapeHtml(member.paradigm)} · ${(member.weight * 100).toFixed(1)}% weight</span>
           <strong>${escapeHtml(labelCase(member.label))} · ${formatPercent(member.confidence)}</strong>
         </div>`,
     )
     .join("");
   renderAgreement(payload.agreement);
+  elements.resultsEmpty.hidden = true;
   elements.resultsSection.hidden = false;
   elements.explainSection.hidden = false;
   activateRail("model");
-  window.setTimeout(() => {
+  if (window.matchMedia("(max-width: 720px)").matches) {
     elements.resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 120);
+  }
 }
 
 async function runPrediction() {
-  if (!state.patient) return;
-  clearError();
-  elements.predictButton.disabled = true;
+  if (!state.patient || state.isBusy) return;
+  resetResultForPatientChange();
+  const generation = state.generation;
+  const features = state.patient.features.slice();
+  setBusy(true);
   elements.analysisLoading.hidden = false;
   try {
     const payload = await fetchJson("/predict", {
       method: "POST",
-      body: JSON.stringify({ features: state.patient.features }),
+      body: JSON.stringify({ features }),
     });
-    renderPrediction(payload);
+    if (generation === state.generation) renderPrediction(payload);
   } catch (error) {
     showError(`Prediction could not complete: ${error.message}`);
   } finally {
     elements.analysisLoading.hidden = true;
-    elements.predictButton.disabled = false;
+    setBusy(false);
   }
 }
 
 function selectExplanationScope(deep) {
   state.deepExplanation = deep;
   elements.scopeOptions.forEach((option) => {
+    const selected = (option.dataset.scope === "deep") === deep;
     option.classList.toggle(
       "is-selected",
-      (option.dataset.scope === "deep") === deep,
+      selected,
     );
+    option.setAttribute("aria-pressed", String(selected));
   });
   elements.slowDisclosure.hidden = !deep;
   elements.explainButton.querySelector("span").textContent = deep
-    ? "Request full six-model attribution"
-    : "Explain with fast VQC scope";
+    ? "Request full-ensemble attribution"
+    : "Generate attribution";
   elements.explanationResult.hidden = true;
   state.explanation = null;
 }
@@ -331,7 +362,7 @@ function beginExplanationLoading(deep) {
     : "SHAP and LIME are checking four named clinical features across four VQC members.";
   elements.explanationExpected.textContent = deep
     ? "Typical: 70 seconds or longer"
-    : "Typical: about 7 seconds";
+    : "Reference: 7–30 seconds · device dependent";
   const started = Date.now();
   elements.explanationElapsed.textContent = formatElapsed(0);
   state.explanationTimer = window.setInterval(() => {
@@ -366,14 +397,14 @@ function renderExplanation(payload) {
       const directionLabel = direction.replaceAll("_", " ");
       const directionClass = direction.replaceAll("_", "-");
       const signClass = shapValue >= 0 ? "is-positive" : "is-negative";
-      const featureValue = payload.top_features.find(
-        (feature) => feature.feature_name === name,
-      )?.feature_value;
+      // Show the patient's original measurement, not the quantum-scaled angle.
+      const selectedIndex = state.catalog.selected_feature_names.indexOf(name);
+      const featureValue = selectedIndex < 0 ? undefined : state.patient.selected_values[selectedIndex];
       return `
         <div class="attribution-row">
           <div class="attribution-name">
             <strong>${escapeHtml(name)}</strong>
-            <span>${featureValue === undefined ? "selected clinical input" : `input ${formatFeatureValue(featureValue)}`}</span>
+            <span>${featureValue === undefined ? "Selected clinical input" : `Raw ${formatFeatureValue(featureValue)}`}</span>
           </div>
           <div class="attribution-scale" aria-label="${escapeHtml(name)}: SHAP ${shapValue.toFixed(4)}, LIME ${limeValue.toFixed(4)}">
             <span class="attribution-axis"></span>
@@ -393,7 +424,7 @@ function renderExplanation(payload) {
 }
 
 async function runExplanation() {
-  if (!state.patient || !state.prediction) return;
+  if (!state.patient || !state.prediction || state.isBusy) return;
   if (
     state.deepExplanation &&
     !window.confirm(
@@ -403,21 +434,25 @@ async function runExplanation() {
     return;
   }
   clearError();
+  const generation = state.generation;
+  const features = state.patient.features.slice();
+  setBusy(true);
   beginExplanationLoading(state.deepExplanation);
   try {
     const payload = await fetchJson("/explain", {
       method: "POST",
       body: JSON.stringify({
-        features: state.patient.features,
+        features,
         model: "quantum",
         allow_slow: state.deepExplanation,
       }),
     });
-    renderExplanation(payload);
+    if (generation === state.generation) renderExplanation(payload);
   } catch (error) {
     showError(`Explanation could not complete: ${error.message}`);
   } finally {
     endExplanationLoading();
+    setBusy(false);
   }
 }
 
@@ -432,13 +467,13 @@ function forceDisagreementForVerification() {
 }
 
 elements.patientSelect.addEventListener("change", (event) => {
-  renderSelectedPatient(Number(event.target.value));
+  if (!state.isBusy) renderSelectedPatient(Number(event.target.value));
 });
 elements.predictButton.addEventListener("click", runPrediction);
 elements.explainButton.addEventListener("click", runExplanation);
 elements.scopeOptions.forEach((option) => {
   option.addEventListener("click", () => {
-    selectExplanationScope(option.dataset.scope === "deep");
+    if (!state.isBusy) selectExplanationScope(option.dataset.scope === "deep");
   });
 });
 
