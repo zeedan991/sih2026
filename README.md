@@ -69,6 +69,8 @@ The Phase 4–6 implementation was verified on 2026-09-01 with 63 passing tests 
 
 The clinical-workspace redesign was verified on 2026-09-02 with 66 passing tests on Windows and inside the Linux Docker image. Live browser checks covered equal result cards, disagreement, real SHAP/LIME completion, patient/scope locking, default-scope reset, raw measurement display, and mobile layout. See [the redesign and Docker record](artifacts/integration/clinical_redesign_docker_verification.md).
 
+The September 2 pre-push review increased the suite to **77 passing tests on both Windows and Linux**, verified the real fast/full explanation flows, fixed stale dashboard state and bounded expensive requests, and cleaned generated caches. See [the pre-push review](artifacts/integration/prepush_review_2026-09-02.md), including its security-review limitations and remaining PRD gaps.
+
 ## Containers
 
 With Docker installed:
