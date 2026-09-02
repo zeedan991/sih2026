@@ -16,6 +16,9 @@ RUN python -m pip install --upgrade pip \
     && python -m pip install -r requirements.txt \
     && python -m pip check
 
+# Small 2–4 qubit state vectors are slower when OpenMP fans out to every host CPU.
+ENV OMP_NUM_THREADS=1
+
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
 COPY dev-dashboard/ ./dev-dashboard/

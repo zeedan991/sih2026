@@ -1,4 +1,4 @@
-"""Static deployment-contract checks for environments without Docker CLI."""
+"""Deployment-contract checks complementary to the real Docker smoke test."""
 
 from pathlib import Path
 
@@ -14,6 +14,7 @@ def test_docker_image_uses_pinned_python_stack_and_serves_fastapi() -> None:
     assert 'CMD ["uvicorn", "backend.main:app"' in dockerfile
     assert "COPY frontend/ ./frontend/" in dockerfile
     assert "COPY dev-dashboard/ ./dev-dashboard/" in dockerfile
+    assert "ENV OMP_NUM_THREADS=1" in dockerfile
 
 
 def test_compose_exposes_both_clients_and_waits_for_model_readiness() -> None:
@@ -27,3 +28,4 @@ def test_compose_exposes_both_clients_and_waits_for_model_readiness() -> None:
     assert '"8501:8501"' in compose
     assert "condition: service_healthy" in compose
     assert "models_loaded" in compose
+    assert "http://127.0.0.1:8501/_stcore/health" in compose
