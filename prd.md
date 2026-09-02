@@ -74,12 +74,14 @@ A working, honestly-benchmarked, explainable hybrid quantum-classical classifier
 
 ## 6. Success criteria
 
+**Implementation audit, September 2, 2026:** This table defines targets, not a claim that all targets passed. M4 still lacks a retained complete three-seed precision/recall/F1 report for both classical configurations. M5 is partial: quantum VQC/QSVM explanations work, but classical SHAP is not exposed by the approved quantum-only `/explain` contract. Five-fold CV is also unimplemented. Do not silently broaden that API to hide the mismatch; agree on a follow-up scope first. D-22 explicitly accepts the ensemble's lack of a demonstrated accuracy win without retuning it. See `DEMO_GUIDE.md` for the current demo boundary.
+
 | Criterion | Target | Evidence |
 |---|---|---|
-| Quantum model trains correctly | Cost decreases monotonically (not flat) over training | Regression test in `roadmap.md` day 1 |
+| Quantum model trains correctly | Final cost is lower than initial cost; individual epochs need not be monotonic | Cost-decreases regression test in `roadmap.md` day 1 |
 | Quantum-kernel SVM accuracy | Verified achievable: 95.6% on WBCD with selected (not PCA) features | `decisions.md` D-10, D-13 |
 | VQC (re-upload + re-map) accuracy | Verified achievable: ~93% on WBCD with selected features | `decisions.md` D-11 |
-| Ensemble beats best single quantum model | Yes, by a measured (possibly modest) margin | Documented comparison, honest either way |
+| Ensemble versus best single quantum model | Original win target was not achieved; the measured non-significant difference is accepted under D-22 | Both findings reported: reduced VQC-family variability and no demonstrated accuracy win; no equivalence proof |
 | **Fair classical comparison** | Classical on the *same 4 features* as quantum is reported alongside classical-on-all-30 — verified: same-4-feature LogReg (92.98%) ties the VQC (92.98%) | `decisions.md` D-14 — don't report only the flattering (all-30) classical number |
 | **Hybrid display** | Every prediction shows quantum AND classical results together, equal visual weight | Live demo — this should be undeniable within 5 seconds of any demo run |
 | Explainability | SHAP output shown for a real prediction from both paradigms, using real clinical feature names (not PC1-style labels) — verified: `mean concave points`, `worst radius`, `worst perimeter`, `worst concave points` | Screenshot + live demo, `decisions.md` D-13 |

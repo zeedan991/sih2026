@@ -238,6 +238,8 @@ Each entry: what we decided, why, and what we gave up. Read this before overturn
 
 **Decision:** The `/explain` response must never include a standalone confidence value that gets rendered as if it were a second verdict. It returns feature attribution only (names, SHAP/LIME values, direction) — always visually and logically anchored to the single confidence number already shown from `/predict`, never a competing one. This applies specifically to the fast VQC-only default (D-17); the full opt-in (`allow_slow=True`) explanation naturally matches the dial exactly anyway, since it explains the literal ensemble prediction, so no fix is needed on that path.
 
+**Evidence audit, September 2, 2026:** The original wording above is retained as the reviewed decision record, but its same-patient attribution needs correction. `artifacts/explainability/phase3_real_model_verification.md` records the VQC-only value for patient 307, while QSVM-only and full-ensemble values belong to patient 242. The approximately 12.88-point same-patient spread is therefore QSVM-only versus full ensemble; it does not establish that exact VQC-only/full-ensemble spread. The general UI hazard and attribution-only contract remain valid.
+
 ---
 
 ### D-24. Present the judge UI as a clinical research workspace
@@ -253,3 +255,15 @@ Each entry: what we decided, why, and what we gave up. Read this before overturn
 **Context:** The first real Docker run on 2026-09-02 successfully installed every pinned requirement, but model initialization used roughly twenty CPU cores for the tiny 2–4 qubit circuits. A targeted ten-forward-pass probe under the live workload measured 0.156 seconds with the default OpenMP setting versus 0.015 seconds with one thread. This probe is an overhead diagnostic, not an end-to-end performance benchmark.
 
 **Decision:** Set `OMP_NUM_THREADS=1` in the image. This controls execution overhead only; it does not change model definitions, seeds, training data, 100-epoch budgets, or dependency versions. Re-measure if the project moves to materially larger state vectors. Docker's per-user executable directory must also be on the calling shell's PATH so its standard credential helper can be found; no password is needed in the source or Compose file.
+
+---
+
+### D-26. Pre-push review: bound the demo workload and distinguish working features from research claims
+
+**Context:** The user requested a whole-folder review before publishing to GitHub, with a confirmed September 8 hackathon. Review found that Streamlit could retain a previous patient's explanation after selection changed, concurrent expensive inference could queue, oversized request bodies were not bounded before parsing, and the live 20-row quantum training budget was not clearly distinguished from the saved 200-row benchmark.
+
+**Decision:** Clear patient/scope-dependent state, handle request failures visibly, admit one prediction/explanation at a time with immediate HTTP 429 for competing inference, and limit incoming JSON bodies to 16 KiB with HTTP 413 before parsing. Health/catalog/metrics stay available while inference runs. Expose actual seed/epochs/training counts in `/health` and both frontends. Compose defaults to loopback for both services; trusted-LAN API access is explicit and the internal dashboard stays local. These safeguards are not authentication, distributed rate limiting, or a claim of production security. No model definitions, weights, training budgets, or dependency pins were retuned.
+
+**Research qualifications:** Five-fold CV, classical SHAP, and a complete retained three-seed classical precision/recall/F1 report remain gaps, not completed features. Current binary precision/recall/F1 use class 1 (benign); recall must not be called malignant sensitivity. D-22's word "tie" means the tests found no significant difference, not that equivalence was proven. The weak amplitude model changes the feature map and discards vector magnitude during normalization; a smaller Hilbert space alone has not been isolated as its cause. Shared preprocessing makes the OOB weights model-level estimates, not fully nested pipeline validation. Preserve all six models and the existing reports.
+
+**Source preservation:** Keep the original Word blueprint as explicitly historical source material, along with benchmark and verification reports. Clean generated caches only; exclude local environments, credentials, and disposable archives from Git and Docker build contexts. The current deadline and limitations live in `DEMO_GUIDE.md` and `roadmap.md`, not the old blueprint's calendar or aspirational claims.

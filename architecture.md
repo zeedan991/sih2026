@@ -99,7 +99,7 @@ Raw WBCD (569 × 30 features)
                                      real, clinically-named, no
                                      abstraction]
    → MinMaxScaler to [10⁻⁶, π-10⁻⁶] (quantum models only; clip=True)
-   → 5-fold CV within training set
+   → Held-out evaluation repeated across seeds (5-fold CV remains unimplemented)
 ```
 
 Every preprocessing component is fitted on training rows only. The slightly
@@ -276,8 +276,8 @@ A controlled real-model Phase 3 verification (seed 42, four VQCs at 100 epochs, 
 | `/health` | GET | — | `{status, models_loaded, quantum_members, classical_models, selected_features, runtime_configuration: {seed, vqc_epochs, quantum_training_limit, classical_training_rows}, error?}` — distinguishes the live demo from the separate saved benchmark. |
 | `/predict` | POST | `{features: float[30]}` | `{quantum: {label, confidence, per_model}, classical: {full_feature: {...}, same_4_feature: {...}}}` |
 | `/explain` | POST | `{features: float[30], model, allow_slow: bool = false}` | `{feature_names, shap_values, top_features, scope: "vqc_fast"\|"full_ensemble"}` — never includes a standalone confidence/probability field (D-23). This response supplies attribution only; the frontend anchors it to the confidence already shown from `/predict`, never renders a second number. `allow_slow=false` (default) explains the fast VQC sub-ensemble; `allow_slow=true` explains the full 6-model ensemble, which naturally matches `/predict`'s number exactly since it explains that literal prediction. `feature_names` are always real clinical names, never PC1-style labels. |
-| `/baselines` | GET | — | Full comparison table: both quantum types x both classical configurations |
-| `/metrics` | GET | — | Ensemble vs. single-model, confusion matrix, ROC-AUC, quantum-vs-classical head-to-head (both classical configs) |
+| `/baselines` | GET | — | Live-runtime classical accuracy, precision, recall and F1 for four models in each of the two feature configurations; these are single-split results, not the saved three-seed benchmark. |
+| `/metrics` | GET | — | Saved Phase 2 quantum ensemble/member accuracy and OOB-weight summaries, plus carried same-four-feature classical means. Full confusion-matrix/ROC-AUC and three-seed classical metric responses remain unimplemented. |
 
 `quantum` and `classical` are always both present and fully populated (D-12). `classical` now has two sub-objects, not one — both always populated too (D-14).
 
@@ -339,6 +339,8 @@ Because §3.2 selects 4 *named* original features instead of extracting 4 abstra
 
 **One number on screen, always (D-23).** The fast VQC-only default explanation and the full 6-model ensemble prediction can legitimately disagree on confidence — they're different model subsets, verified during Phase 3 to differ by as much as 13 points on the same patient. The frontend must never show both: the dial's confidence, already returned by /predict, is the only number displayed; the explanation panel supplies feature-attribution bars underneath it and nothing else. Two different-looking probabilities for one patient reads as a bug to a judge in a live demo, regardless of how correct it is underneath.
 
+**Evidence qualification (September 2):** The retained Phase 3 report measures the approximately 13-point same-patient spread between **QSVM-only and full ensemble**, not VQC-only and full ensemble; the quoted VQC case used another patient. See the audit note under D-23. The attribution-only contract is unchanged. "One number" here means one verdict for each displayed model result, with no extra explanation-scope verdict; the required quantum and classical dials both remain visible.
+
 ### 6.4 Color tokens
 
 | Token | Hex | Use |
@@ -362,6 +364,8 @@ Responsive to mobile width, visible keyboard focus states, `prefers-reduced-moti
 
 ## 7. Deployment
 
+The root `Dockerfile` and `docker-compose.yml` are authoritative. The shortened sketch below omits the actual image's `libgomp1`, OpenMP setting, dashboard, and saved benchmark copies. Compose binds both services to loopback by default; only the judge-facing API can be deliberately exposed on a trusted network with `QML_BIND_HOST`. See `README.md`. No public authentication or production deployment is implemented.
+
 ```dockerfile
 FROM python:3.14-slim
 WORKDIR /app
@@ -377,11 +381,11 @@ CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 ## 8. Scalability and generalization (PS objectives 4 and 6, explicit)
 
-**Scalable:** qubit count and selected-feature count are both config values, not hard-coded logic. The backend/frontend split means scaling inference is a standard FastAPI concern, independent of the quantum code. Swapping datasets touches only `backend/data/pipeline.py`.
+**Current scale:** the core is intentionally fixed to WBCD's 30 inputs and four selected features. VQC variants have explicit 3/4-qubit configurations; the 3-qubit variant uses fixed selected-column indices `(0, 2, 3)`, not a new per-seed top-three ranking. Both kernels consume four values, with amplitude encoding on two qubits. A new dataset or feature count needs coordinated schema, model, preprocessing, test, and UI changes. QSVM training remains quadratic in the pool size; multi-worker serving would duplicate training and has not been validated.
 
-**Compatible with near-term quantum hardware:** every circuit targets PennyLane's device abstraction (`qml.device(...)`), not a simulator-specific API — pointing at real hardware (IBM, AWS Braket) via a PennyLane plugin is a device-string change (D-06). Not run on real hardware in this project (PRD C3, a stretch goal).
+**Hardware portability is future work:** circuits use PennyLane's device abstraction, but this project has only validated classical simulation with `lightning.qubit`. Real hardware would require a compatible plugin, credentials, device/shot configuration, supported gates, and a verified differentiation method; it is not a verified device-string-only substitution (PRD C3).
 
-**Generalization:** stratified splitting, 5-fold CV, and >=3-seed reporting (§3.2, `decisions.md` D-09) are the actual mechanism — not just a claim. The two-configuration classical comparison (§3.6) is itself a generalization safeguard: it stops an unfair-comparison artifact from being reported as a genuine finding.
+**Generalization actually measured:** independent stratified holdouts across seeds 42, 123, and 2026, with preprocessing fitted only on training rows. Five-fold CV in D-09 is a planned requirement, not implemented evidence. The same-feature comparison controls feature count, not every experimental factor: the live quantum demo uses a 20-row training pool, the saved quantum benchmark uses 200, and classical models use all 455 training rows. OOB is model-level: shared preprocessing is fitted on the entire training split, not refitted within each bootstrap. Thus its weighting estimate is not fully nested preprocessing-OOB validation. Holdout results on one small dataset do not establish clinical generalization.
 
 ---
 *Cross-references: `decisions.md` D-13/D-14/D-15 for this revision's fixes and the reasoning behind them, `prd.md` for updated scope, `roadmap.md` for the updated phase plan.*

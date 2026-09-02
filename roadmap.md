@@ -1,6 +1,6 @@
-# Roadmap — mapped to the real SIH 2026 calendar
+# Roadmap — September 8 demo deadline
 
-Today: **August 29, 2026**. SIH 2026 launched August 21; college-level internal hackathons run through September, and SIH26139's own listed idea-submission deadline is **September 20, 2026** — that's about 3 weeks out (0/500 ideas submitted for this PS as of this check, so the window is genuinely open, not filling up). If your team clears the internal round, national screening (PPT + video) follows in October, with the Grand Finale a 36-hour build in December. This roadmap targets a strong, honest, fully-working core by the September deadline — not a rushed attempt at everything in the concept doc at once. (The "Day 1, Day 2..." labels below are relative to whenever your team actually starts building, not fixed calendar dates.)
+Updated **September 2, 2026**. The user's confirmed hackathon is **September 8, 2026**: six calendar days away. That is the working deadline, not the September 20 date in the historical blueprint. Earlier national-calendar, submission-count, and eligibility claims are not current verified guidance; confirm logistics with the college organizer. The original relative phase labels below describe build order, not a new ten-day schedule. Use `DEMO_GUIDE.md` for current readiness, limitations, and rehearsal steps.
 
 Build order deliberately front-loads the highest-risk, least-familiar piece (the quantum circuit) and treats the multimodal extension as something you *earn the right to attempt*, not a default.
 
@@ -10,7 +10,7 @@ Build order deliberately front-loads the highest-risk, least-familiar piece (the
 
 - Clone repo, add `AGENTS.md`, `prd.md`, `architecture.md`, `roadmap.md`, `decisions.md` to the root
 - Create a Python 3.14 virtualenv and run `pip install -r requirements.txt` — this exact file was tested end-to-end on Python 3.14 (see `architecture.md` §2 and `decisions.md` D-19). The pinned XGBoost requires Python 3.12 or newer.
-- Assign roles against `architecture.md` §5's folder structure. Recommend **at least 2 people** ramp up on `backend/quantum/` specifically — it's the piece with no ready-made template and the one place a silent bug (see below) can eat days
+- Understand `architecture.md` §5's folder structure, especially `backend/quantum/`, before changing circuit code.
 - Everyone reads `decisions.md` D-02, D-03, and D-15 once. These are verified silent-failure bugs — code that runs cleanly and even looks numerically fine, but is wrong. Know them going in so nobody rediscovers them the hard way, and so nobody "fixes" this file back to the buggy pattern while refactoring.
 
 ## Phase 1 — Core VQC + classical baselines (Days 1–2)
@@ -34,7 +34,7 @@ Build order deliberately front-loads the highest-risk, least-familiar piece (the
 - Log **every individual model's** accuracy and assigned weight, split out by type (VQC vs. QSVM) — this table is genuinely interesting on its own (verified in this project: the angle-embedding QSVM reached 95.6% vs. the VQC's ~93%, the closest either quantum approach has come to classical, and statistically tied with classical when classical is limited to the same 4 features — `decisions.md` D-14)
 - Statistical test (paired t-test, PRD S4) between ensemble and best single model
 
-**Exit criteria:** ensemble accuracy ≥ best single model's accuracy (VQC or QSVM, whichever wins), with the comparison numbers written down, whichever way they land.
+**Original target:** ensemble accuracy ≥ best single model's accuracy. **Accepted measured outcome (D-22):** the ensemble did not beat the best single model on mean accuracy; paired tests found no significant difference. Retain the six models and report both the narrower VQC-family variability and the lack of a demonstrated win. A non-significant test is not proof of equivalence.
 
 ## Phase 3 — Explainability (Day 5)
 
@@ -73,25 +73,24 @@ Build order deliberately front-loads the highest-risk, least-familiar piece (the
 
 **Docker follow-up 2026-09-02:** Docker Desktop is now installed. Both images built with unchanged dependency pins, the six-model API reached ready, and 66 tests passed both locally and inside the Linux image. The image now uses one OpenMP thread for the tiny circuits (D-25), and Streamlit has its own health endpoint. The earlier missing-Docker limitation is resolved; human demo rehearsal is still separate from automated verification.
 
-**By here you have a complete, honest, working core.** Everything past this point is optional and time-boxed.
+**The interactive core works; that is not the same as every PRD criterion being complete.** The September 2 review found missing fold-based cross-validation, classical-model SHAP (M5), and complete saved three-seed classical metric evidence (M4). These remain explicit gaps in `DEMO_GUIDE.md`; do not claim they passed or start bonus work ahead of them.
 
-## Phase 7 — Buffer + optional bonus (remaining days before Sept 20)
+## Phase 7 — Buffer (remaining days before September 8)
 
 - First priority for any remaining time: polish, bug-fix, and rehearse the core again. A polished Must-have beats a half-built Should-have.
-- **Only if the core is fully solid:** attempt the multimodal extension (PRD C1). Time-box it explicitly — e.g., "we attempt this only if Phase 6 is done by day 12; otherwise it becomes a documented future-roadmap slide, not a half-built demo feature." A clearly-explained future direction reads better to judges than a broken bonus feature.
+- **No bonus build is currently approved.** First resolve or clearly disclose the remaining core gaps, preserve a known-good build, and rehearse. Multimodal data, noisy simulation, and hardware runs remain future work.
 - Prepare the docx-based submission material and the pitch deck from the same verified numbers used throughout — no new claims introduced at this stage that weren't tested earlier.
-- **Download and use the official SIH 2026 PPT template from sih.gov.in — don't submit `Project_Blueprint_SIH26139.docx` as-is.** The internal round requires the idea presentation in the official template format (confirmed: colleges require submissions "strictly as per the SIH 2026 PPT format"). The blueprint docx is your source content — pull the verified numbers, architecture summary, and honest framing from it into the mandated slide template, not the other way around.
-- Confirm your team's registration status early: internal-round rules for this cycle require a 6-member team (at least 1 female member) with a faculty mentor, and most colleges run their own pre-screening before nominating to the national portal — don't assume selecting this PS in the "up to 2 problem statements" step guarantees a slot without clearing your college's own internal round first.
+- Confirm the required presentation template, registration, venue, and submission format with the organizer. `Project_Blueprint_SIH26139.docx` is historical source material, not a submission-ready or current evidence document. Use the checked-in benchmark reports and current limitations when preparing slides.
 
-## Phase 8 — If selected: October–November window
+## Phase 8 — If selected: follow-up work (dates to confirm)
 
-- National screening needs a PPT + video, not new code — reuse the docx content and the live demo recording
+- Confirm follow-up submission requirements; reuse verified results and a live demo recording, not unreviewed claims from the old blueprint
 - Use this window to harden whatever was cut in Phase 7 (multimodal, noise-aware simulation via `default.mixed`, or a real-hardware run via a PennyLane hardware plugin — PRD C1–C3)
 
-## Phase 9 — December Grand Finale (36-hour build)
+## Phase 9 — Any later final event (format and dates to confirm)
 
-- By this point you should already have a working system from September; the 36 hours are for final integration, live-demo hardening, and responding to any judge feedback from screening — not building from scratch
-- Keep a "known good" tagged commit you can roll back to at any point during the 36 hours if an experiment goes wrong
+- Build on the working September system and use organizer feedback to prioritize further validation
+- Keep a known-good commit available before experiments
 
 ---
 
@@ -99,6 +98,6 @@ Build order deliberately front-loads the highest-risk, least-familiar piece (the
 
 | If behind schedule at... | Cut this first | Keep this no matter what |
 |---|---|---|
-| End of Phase 2 | Reduce ensemble from 6 → 2 models (1 VQC + 1 QSVM — keep both paradigms even if you cut count) | Single working VQC + baselines (Phase 1) |
+| Phase 2 complete | Cut new tuning experiments, not the required six models (D-22) | Four VQCs, both QSVMs, and honest baselines |
 | End of Phase 5 | Custom frontend → fall back to polished Streamlit only | Working backend + SHAP explanation |
 | Phase 7 | Multimodal extension entirely | Everything through Phase 6 |

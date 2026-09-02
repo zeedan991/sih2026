@@ -365,7 +365,7 @@ function beginExplanationLoading(deep) {
     ? "Recomputing full ensemble kernels"
     : "Evaluating VQC perturbations";
   elements.explanationLoadingDetail.textContent = deep
-    ? "Two QSVM members recompute kernels against the explanation background for every SHAP sample."
+    ? "Two QSVM members recompute kernel rows against their fitted training samples for each perturbed input."
     : "SHAP and LIME are checking four named clinical features across four VQC members.";
   elements.explanationExpected.textContent = deep
     ? "Typical: 70 seconds or longer"
