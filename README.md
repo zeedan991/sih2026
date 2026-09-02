@@ -46,6 +46,8 @@ The four selected clinical features on the fixed split are `mean concave points`
 
 The Phase 4–6 implementation was verified on 2026-09-01 with 63 passing tests and a real browser walkthrough of prediction, disagreement, fast explanation, and the explicit slow opt-in. See [the integration record](artifacts/integration/phase4_6_verification.md).
 
+The clinical-workspace redesign was verified on 2026-09-02 with 66 passing tests on Windows and inside the Linux Docker image. Live browser checks covered equal result cards, disagreement, real SHAP/LIME completion, patient/scope locking, default-scope reset, raw measurement display, and mobile layout. See [the redesign and Docker record](artifacts/integration/clinical_redesign_docker_verification.md).
+
 ## Containers
 
 With Docker installed:
@@ -56,3 +58,13 @@ docker compose up --build
 
 The API is exposed on port 8000 and the Streamlit console on port 8501. Compose waits for trained-model readiness before starting the dashboard.
 
+The real Docker build and startup were verified on Docker Desktop 4.89.0 / Engine 29.7.2. The image keeps every requirement pin unchanged and uses one OpenMP thread for the small quantum state vectors. The API and Streamlit service each have their own health check.
+
+If a newly installed per-user Docker Desktop is not found in the current PowerShell session, open a new terminal. For the per-user installation used by this project, the following adds its executable and standard credential helper to the current process only:
+
+```powershell
+$env:PATH = "$env:LOCALAPPDATA\Programs\DockerDesktop\resources\bin;$env:PATH"
+docker compose up --build -d
+```
+
+No Docker account password belongs in the repository or Compose file.

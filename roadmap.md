@@ -61,6 +61,8 @@ Build order deliberately front-loads the highest-risk, least-familiar piece (the
 
 **Verified 2026-09-01:** A live browser run rendered equal 582 px result cards with the required indigo and teal tokens, triggered the amber banner on a genuine model disagreement, held a real elapsed-time explanation state through computation, and rendered four real-name SHAP/LIME attribution rows without a competing confidence value. The full six-model explanation is a visibly slower, explicitly confirmed opt-in. Browser console errors and warnings were empty.
 
+**Redesigned 2026-09-02:** At the user's request, the frontend is now a compact clinical research workspace with a patient-record side panel, restrained typography and motion, raw measurement labels, and equal-sized model cards. Desktop/mobile browser checks, patient/scope locking, real disagreement, fast explanation completion, and default-scope reset all passed. D-24 records the presentation revision.
+
 ## Phase 6 — Integration, Docker, rehearsal (Day 10)
 
 - `docker compose up` from a clean checkout, tested by someone who didn't write the code
@@ -68,6 +70,8 @@ Build order deliberately front-loads the highest-risk, least-familiar piece (the
 - Rehearse the "why not just classical ML" answer (`decisions.md` D-07) out loud, as a team, at least once
 
 **Engineering verification 2026-09-01:** The full suite passes (63 tests), `pip check` is clean, Python compilation succeeds, both local applications return HTTP 200, and a real model/browser flow passes. Dockerfile and Compose behavior are contract-tested, but the clean image build remains pending because Docker is not installed on the verification host. Human demo rehearsal remains a team activity rather than a code task.
+
+**Docker follow-up 2026-09-02:** Docker Desktop is now installed. Both images built with unchanged dependency pins, the six-model API reached ready, and 66 tests passed both locally and inside the Linux image. The image now uses one OpenMP thread for the tiny circuits (D-25), and Streamlit has its own health endpoint. The earlier missing-Docker limitation is resolved; human demo rehearsal is still separate from automated verification.
 
 **By here you have a complete, honest, working core.** Everything past this point is optional and time-boxed.
 

@@ -237,3 +237,19 @@ Each entry: what we decided, why, and what we gave up. Read this before overturn
 **Context:** Phase 3's own verification surfaced this directly: for the same patient, VQC-only scope reported 96.11% benign, QSVM-only 96.20%, and the full six-model ensemble 83.32% — a large, clinically meaningful spread across scopes. This is mathematically expected (different model subsets, different outputs), but it's a real UI hazard: architecture.md section 6 puts the ensemble's confidence on the main results dial; if the fast-default explanation view then shows a different confidence number for feature attribution, a judge sees two disagreeing numbers for one patient with no time in a live demo to understand why. That reads as a bug, not a nuance, regardless of how correct it is underneath.
 
 **Decision:** The `/explain` response must never include a standalone confidence value that gets rendered as if it were a second verdict. It returns feature attribution only (names, SHAP/LIME values, direction) — always visually and logically anchored to the single confidence number already shown from `/predict`, never a competing one. This applies specifically to the fast VQC-only default (D-17); the full opt-in (`allow_slow=True`) explanation naturally matches the dial exactly anyway, since it explains the literal ensemble prediction, so no fix is needed on that path.
+
+---
+
+### D-24. Present the judge UI as a clinical research workspace
+
+**Context:** After reviewing the Phase 5 frontend, the user requested a more professional clinical/quantum website. The previous oversized hero, diffuse gradients, large gauges, and decorative motion made the interaction feel more like a promotional page than a research application.
+
+**Decision:** Put patient selection and paired model assessments in the primary working area. Retain the exact indigo/teal color tokens, equal-size dials, circuit rail, amber disagreement, both classical configurations, and attribution-only explanation contract. Use white surfaces, fine borders, compact headings, Source Sans 3 body text, and restrained functional motion. Keep the research-only disclaimer explicit rather than suggesting diagnostic readiness. Show raw patient measurements alongside attributions, not unlabeled quantum-scaled angles. Lock patient and explanation-scope controls while a request is active and discard any stale-generation response, preventing a result from appearing under a different selected record.
+
+---
+
+### D-25. Limit container OpenMP parallelism for tiny quantum circuits
+
+**Context:** The first real Docker run on 2026-09-02 successfully installed every pinned requirement, but model initialization used roughly twenty CPU cores for the tiny 2–4 qubit circuits. A targeted ten-forward-pass probe under the live workload measured 0.156 seconds with the default OpenMP setting versus 0.015 seconds with one thread. This probe is an overhead diagnostic, not an end-to-end performance benchmark.
+
+**Decision:** Set `OMP_NUM_THREADS=1` in the image. This controls execution overhead only; it does not change model definitions, seeds, training data, 100-epoch budgets, or dependency versions. Re-measure if the project moves to materially larger state vectors. Docker's per-user executable directory must also be on the calling shell's PATH so its standard credential helper can be found; no password is needed in the source or Compose file.

@@ -325,6 +325,8 @@ quantum-disease-detection/
 
 Signature element: a **measurement dial** radial gauge. Layout motif: a **circuit rail** across the top (Data -> Select -> Model -> Explain — note: "Select," not "Preprocess," now that feature selection is named and visible rather than a black-box reduction step. Showing the actual selected feature names here is a small, free trust-building detail). A rendered mockup of the results screen was shown earlier in this project's planning — build to match it: two equal-size dials (quantum indigo, classical teal), a compact "why this prediction" panel beneath with real feature names as horizontal bars.
 
+**Clinical-workspace revision (2026-09-02, D-24):** The user requested a more professional clinical presentation. Use a compact application header and study context, a restrained circuit rail, a patient-record panel on the left, and the equal quantum/classical assessment cards on the right. Remove the oversized promotional hero, decorative ambient gradients, and orbit animations. White surfaces, fine borders, compact measurement tables, and short functional transitions establish the research-workspace tone. The empty state must show that inference has not run, never invented patient results. On narrow screens the layout stacks without making either paradigm more prominent.
+
 ### 6.2 Why two dials, always
 
 Every `/predict` response always has both `quantum` and `classical` fully populated (§4); the frontend renders both at equal visual size on every prediction, color-coded by paradigm, never by which one "won." When they disagree on the label, an amber banner says so explicitly.
@@ -348,7 +350,7 @@ Because §3.2 selects 4 *named* original features instead of extracting 4 abstra
 
 ### 6.5 Type
 
-Space Grotesk (display), Source Serif 4 (body/explanation), IBM Plex Mono (metrics, feature values).
+Space Grotesk (compact headings), Source Sans 3 (body, controls, and explanations), IBM Plex Mono (metrics and raw feature values). Source Sans 3 replaces the prior Source Serif 4 body treatment at the user's request for a more clinical application-like presentation (D-24).
 
 ### 6.6 Accessibility floor
 
