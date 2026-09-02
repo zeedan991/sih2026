@@ -11,7 +11,7 @@ services:
       QML_SHAP_NSAMPLES: "60"
       QML_LIME_NUM_SAMPLES: "1000"
     ports:
-      - "8000:8000"
+      - "${QML_BIND_HOST:-127.0.0.1}:8000:8000"
     healthcheck:
       test:
         - CMD
@@ -42,7 +42,7 @@ services:
     environment:
       QML_API_BASE_URL: http://api:8000
     ports:
-      - "8501:8501"
+      - "127.0.0.1:8501:8501"
     depends_on:
       api:
         condition: service_healthy

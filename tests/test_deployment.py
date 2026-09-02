@@ -24,8 +24,8 @@ def test_compose_exposes_both_clients_and_waits_for_model_readiness() -> None:
     assert "  dev-dashboard:" in compose
     assert 'QML_VQC_EPOCHS: "100"' in compose
     assert 'QML_TRAINING_LIMIT: "20"' in compose
-    assert '"8000:8000"' in compose
-    assert '"8501:8501"' in compose
+    assert '"${QML_BIND_HOST:-127.0.0.1}:8000:8000"' in compose
+    assert '"127.0.0.1:8501:8501"' in compose
     assert "condition: service_healthy" in compose
     assert "models_loaded" in compose
     assert "http://127.0.0.1:8501/_stcore/health" in compose

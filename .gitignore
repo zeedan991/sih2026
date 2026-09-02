@@ -1,4 +1,33 @@
+# Local Python environments and generated caches
 .venv/
+venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Credentials and machine-specific settings (never commit live secrets)
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# Disposable output, exports, and OS metadata
+*.log
+*.zip
+*.tar
+*.tar.gz
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Keep checked-in benchmark evidence and source documents under version control.
