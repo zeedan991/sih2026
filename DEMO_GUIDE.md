@@ -1,6 +1,6 @@
 # Q-TRACE: September 8 demo guide
 
-Status reviewed September 2, 2026. The hackathon date comes from the user; confirm venue, submission format, and presentation template with the organizer.
+Status reviewed September 3, 2026. The hackathon date comes from the user; confirm venue, submission format, and presentation template with the organizer.
 
 ## What this project actually does
 
@@ -39,28 +39,40 @@ Use [the saved Phase 2 report](artifacts/models/phase2_benchmark_100epochs_200po
 
 State both findings: the ensemble supports the VQC-family instability concern through a narrower observed range, and it **did not beat** the strongest single model. The paired tests detected no significant difference; this is not proof of statistical equivalence, clinical validity, or computational quantum advantage.
 
-The previously measured same-four-feature classical means are preserved without rerunning: Logistic Regression 93.57%, Random Forest 93.27%, XGBoost 93.27%, SVM 93.86%. Their table is carried evidence from Phase 1, not a fresh measurement during this review. The Phase 2 artifact does not retain their complete per-seed precision/recall/F1 outputs; do not manufacture uncertainty ranges or present these means as a complete validation report.
+The repeated three-seed classical study is now retained in `artifacts/evaluation/classical_three_seed_metrics.json`, with accuracy, malignant precision/recall/F1, sensitivity, specificity, clinically oriented confusion counts, ROC-AUC, and timing for all eight model/configuration combinations. Same-four mean accuracies reproduce the prior record: Logistic Regression 93.57%, Random Forest 93.27%, XGBoost 93.27%, and SVM 93.86%.
+
+The September 3 leakage-safe five-fold study refits every preprocessing stage inside each fold and trains all six quantum members with 100 VQC epochs and a 20-row quantum pool. Its most useful comparison is:
+
+| Model view | Mean accuracy | Malignant sensitivity | Specificity | Mean ROC-AUC |
+|---|---:|---:|---:|---:|
+| Six-model quantum ensemble | 91.57% | 83.50% | 96.36% | 0.981 |
+| Classical Logistic Regression, all 30 | 97.37% | 94.36% | 99.16% | 0.995 |
+| Classical Logistic Regression, same 4 | 94.03% | 90.59% | 96.08% | 0.989 |
+
+This fold study is stronger generalization evidence than repeated holdout, but the deliberately small quantum training pool also makes it a stress test, not a replacement for the separate 200-row Phase 2 benchmark. The amplitude/2-qubit QSVM was especially unstable here (54.61% mean accuracy, 29.20–62.28% range); retain and report that result as a limitation. It was not used to retune weights after seeing validation results.
 
 ## Demo configuration versus benchmark
 
-The default live app uses seed 42 and a **20-row quantum training pool**, versus 200 in the saved benchmark; classical models use all 455 training rows in both cases. The four VQCs still train for 100 epochs. Both UIs and `/health` show the live configuration. Matching selected features controls input dimension, not sample count. Do not quote saved benchmark accuracy as the live model's measured accuracy.
+The default live app follows `artifacts/models/runtime_manifest.json`, configuration `qtrace-wbcd-s42-e100-q20-v1`: seed 42, four VQCs at 100 epochs, six quantum members, a 20-row quantum training pool, and all 455 training rows for classical fits. It deterministically refits this identified configuration at startup; it does not pretend to load the separate 200-row benchmark weights. Both UIs and `/health` show the live identifier and settings. Matching selected features controls input dimension, not sample count. Do not quote saved benchmark accuracy as the live model's measured accuracy.
 
 The model-level OOB rows were excluded from each member's fit, but shared preprocessing was fitted on the overall training split. These are not fully nested preprocessing-OOB estimates. The held-out test set was excluded from preprocessing, fitting, and weight selection. Repeatedly viewing that test set during development still limits how independently confirmatory it can be.
 
-## Open gaps — don't call these complete
+## Remaining boundaries — don't call these complete
 
-1. **Five-fold CV:** planned in D-09, not implemented. Existing evidence is repeated stratified holdout, not cross-validation folds.
-2. **Classical explanations (M5):** SHAP/LIME work for quantum scopes; the approved `/explain` API supports only `model="quantum"`. A classical extension needs an agreed contract/UI change, not a silent addition.
-3. **Full metric evidence (M4):** `/baselines` provides current single-split classical accuracy/precision/recall/F1. `/metrics` provides saved quantum summaries and carried same-four means, not full three-seed confusion matrices/ROC curves or both classical configurations' complete metrics. Existing recall treats benign as positive; it must not be labeled malignant sensitivity.
-4. **Independent validation:** no external cohort, prospective validation, hardware execution, noise study, production deployment, or fresh second-person machine rehearsal is established by the current tests.
+The four September 2 implementation gaps are closed: disease-oriented metrics, fold-isolated cross-validation, classical attribution, and an identified live configuration are now in the code, APIs, UI, tests, and retained artifacts. The current remaining boundaries are research scope, not hidden implementation claims:
 
-Resolve or explicitly disclose these before presenting all PRD requirements as satisfied. No multimodal bonus work or weight retuning is part of this cleanup.
+1. **Independent clinical validation:** no external cohort, prospective study, calibrated clinical threshold, subgroup/fairness analysis, or regulatory validation.
+2. **Hardware evidence:** the device is configurable and both `lightning.qubit` and `default.qubit` simulator paths are tested, but this repository does not claim a real-QPU or noise study.
+3. **Deployment/privacy:** this is a local research demo with no accounts, hospital integration, encryption termination, or workflow for identifiable health data.
+4. **Human rehearsal:** a teammate should still perform a clean-clone run and rehearse the pitch on the presentation machine.
+
+No multimodal bonus work or post-validation weight retuning is part of this completion pass.
 
 ## Rehearse before September 8
 
 1. Follow the clone/Docker steps in `README.md` on the presentation computer. Keep it plugged in; wait for ready status before judging. Download/build beforehand and check the demo without internet. Fonts can fall back locally; predictions do not need a cloud quantum service.
-2. Select several real held-out records, including an agreement and a disagreement. The demo catalog deliberately prioritizes disagreements for teaching; it is not a representative sample for estimating accuracy. Confirm both equal-size result cards and both classical feature configurations work.
-3. Run fast attribution and narrate that it explains the VQC subset, not a second verdict. Allow roughly 7–30 seconds depending on machine/configuration. Demonstrate the full opt-in only if time permits; allow several minutes. In the September 2 pre-push check it was still computing at 1:58 and subsequently completed. "70 seconds or longer" is a warning, not a promised upper bound.
+2. Select several real held-out records, including an agreement and a disagreement, then load the example named CSV once. The demo catalog deliberately prioritizes disagreements for teaching; it is not a representative sample for estimating accuracy. Confirm both equal-size result cards and both classical feature configurations work.
+3. Run fast quantum attribution, then one classical attribution, and narrate that attribution is anchored to the existing verdict rather than being a second verdict. Allow roughly 7–30 seconds depending on machine/configuration. Demonstrate the full quantum opt-in only if time permits; "70 seconds or longer" is a warning, not a promised upper bound.
 4. Change the patient after completion and verify previous results disappear. If another request is running, wait and retry after HTTP 429 instead of repeatedly clicking.
 5. Open the saved benchmark and answer: "Why quantum?" — to investigate two quantum approaches with a transparent classical comparison and explainability, not to claim a classical simulator has demonstrated quantum advantage.
 6. Have a friend rehearse from a clean clone; keep this known-good Git commit available. Prepare a short screen recording as a labeled backup, not as a replacement for claimed live inference.

@@ -73,12 +73,14 @@ Build order deliberately front-loads the highest-risk, least-familiar piece (the
 
 **Docker follow-up 2026-09-02:** Docker Desktop is now installed. Both images built with unchanged dependency pins, the six-model API reached ready, and 66 tests passed both locally and inside the Linux image. The image now uses one OpenMP thread for the tiny circuits (D-25), and Streamlit has its own health endpoint. The earlier missing-Docker limitation is resolved; human demo rehearsal is still separate from automated verification.
 
-**The interactive core works; that is not the same as every PRD criterion being complete.** The September 2 review found missing fold-based cross-validation, classical-model SHAP (M5), and complete saved three-seed classical metric evidence (M4). These remain explicit gaps in `DEMO_GUIDE.md`; do not claim they passed or start bonus work ahead of them.
+**The interactive core works, and the September 2 evidence gaps were closed on September 3.** Fold-based cross-validation, classical SHAP/LIME, malignant-focused metrics, complete three-seed classical evidence, named CSV intake, and an identified live runtime configuration are implemented and retained. The remaining boundaries in `DEMO_GUIDE.md` are external/clinical validation, real hardware, deployment privacy, and human rehearsal—not features to misrepresent as complete.
 
-## Phase 7 — Buffer (remaining days before September 8)
+## Phase 7 — Evidence completion and buffer (remaining days before September 8)
+
+**Approved and implemented September 3 (D-27):** malignant sensitivity/specificity, clinically oriented confusion matrices and ROC-AUC; complete three-seed classical metrics for both feature views; leakage-safe five-fold validation with preprocessing refitted inside each fold; attribution-only classical SHAP/LIME scopes; exact named 30-feature CSV ingestion; measured classical fit/predict timings; and a checked-in live runtime manifest. These additions close the September 2 core evidence gaps without changing the model family or claiming quantum superiority.
 
 - First priority for any remaining time: polish, bug-fix, and rehearse the core again. A polished Must-have beats a half-built Should-have.
-- **No bonus build is currently approved.** First resolve or clearly disclose the remaining core gaps, preserve a known-good build, and rehearse. Multimodal data, noisy simulation, and hardware runs remain future work.
+- **No bonus build is currently approved.** Preserve the known-good build and rehearse. Multimodal data, noisy simulation, and hardware runs remain future work.
 - Prepare the docx-based submission material and the pitch deck from the same verified numbers used throughout — no new claims introduced at this stage that weren't tested earlier.
 - Confirm the required presentation template, registration, venue, and submission format with the organizer. `Project_Blueprint_SIH26139.docx` is historical source material, not a submission-ready or current evidence document. Use the checked-in benchmark reports and current limitations when preparing slides.
 

@@ -47,29 +47,50 @@ The Streamlit application is an API client only. It does not train a second copy
 
 - `GET /health` — runtime readiness, selected feature names, and actual training configuration.
 - `GET /patients` — held-out WBCD records for a reproducible demo.
+- `POST /ingest` — validate and order one exact named 30-feature record (used by CSV upload), with observed-range warnings.
 - `POST /predict` — always returns the six-model `quantum` result plus both `classical.full_feature` and `classical.same_4_feature` results.
-- `POST /explain` — returns attribution only. The default `allow_slow=false` scope is `vqc_fast`; `allow_slow=true` explicitly enables the slower full ensemble. This response never contains a second confidence or probability.
+- `POST /explain` — returns attribution only for quantum, classical full-feature, or classical same-four views. Quantum defaults to `vqc_fast`; `allow_slow=true` explicitly enables the slower full ensemble. This response never contains a second confidence or probability.
 - `GET /baselines` and `GET /metrics` — benchmark/debug information used by the Streamlit console.
 
 The live default uses seed 42, a **20-row quantum training pool**, and 100 epochs per VQC; classical models use all 455 training rows. The saved three-seed quantum benchmark uses a **200-row pool**. Both UIs disclose the live configuration. These are different experiments: a live prediction is not a reproduction of the saved benchmark, and matching four input features does not also match training sample counts. Keep those qualifications in any presentation.
 
+The live settings are identified by `artifacts/models/runtime_manifest.json`. Startup deterministically refits that manifest; `/health` exposes its configuration ID and any resulting runtime settings. Complete malignant-focused three-seed classical metrics and fold-isolated five-fold evidence are generated with `python -m backend.evaluation` and retained under `artifacts/evaluation/`.
+
 Inference accepts one prediction or explanation at a time. A competing request gets HTTP 429 with `Retry-After`; wait and retry manually. Request bodies over 16 KiB receive HTTP 413. The API is a single-process research demo, not a public clinical service.
 
 The four selected clinical features on the fixed split are `mean concave points`, `worst radius`, `worst perimeter`, and `worst concave points`.
+
+## SIH26139 requirement coverage
+
+| Problem-statement objective | Implemented evidence |
+|---|---|
+| Data ingestion and preprocessing | Held-out WBCD catalog plus exact named 30-feature CSV intake; train-only imputation, scaling, ANOVA selection, and inward quantum-range scaling |
+| Quantum-enhanced classification | Four data-reuploading VQCs plus angle/4-qubit and amplitude/2-qubit quantum-kernel SVMs; OOB weighted soft voting |
+| Classical benchmarking | Logistic Regression, Random Forest, XGBoost, and SVM on all 30 and the identical selected 4 features |
+| Accuracy, sensitivity, specificity | Malignant-focused precision/recall/F1, sensitivity, specificity, confusion counts, ROC-AUC, and timing in retained three-seed and five-fold artifacts |
+| Explainability | Attribution-only SHAP and LIME for quantum fast/full and both classical feature views, always using real clinical names |
+| Generalization and efficiency | Leakage-safe stratified five-fold evaluation, three-seed evidence, measured timing, and explicit experiment boundaries |
+| Simulator / near-term path | Configurable PennyLane device abstraction; `lightning.qubit` and `default.qubit` tested. Real-QPU execution is a documented future validation step, not a current claim |
+| Reproducibility and demonstration | Identified runtime manifest, pinned Python 3.14 environment, Docker Compose, FastAPI, Streamlit console, professional judge-facing UI, and automated regressions |
+
+The authoritative evidence summary is `artifacts/evaluation/phase7_evaluation_summary.md`. The system remains a simulator-based research prototype on one public benchmark dataset; it is not prospectively or clinically validated.
 
 ## Verification
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests -v
 .\.venv\Scripts\python.exe -m pip check
-.\.venv\Scripts\python.exe -m compileall -q backend dev-dashboard tests
+.\.venv\Scripts\python.exe -m compileall -q backend dev-dashboard tests scripts
+node --check frontend\app.js
 ```
 
 The Phase 4–6 implementation was verified on 2026-09-01 with 63 passing tests and a real browser walkthrough of prediction, disagreement, fast explanation, and the explicit slow opt-in. See [the integration record](artifacts/integration/phase4_6_verification.md).
 
 The clinical-workspace redesign was verified on 2026-09-02 with 66 passing tests on Windows and inside the Linux Docker image. Live browser checks covered equal result cards, disagreement, real SHAP/LIME completion, patient/scope locking, default-scope reset, raw measurement display, and mobile layout. See [the redesign and Docker record](artifacts/integration/clinical_redesign_docker_verification.md).
 
-The September 2 pre-push review increased the suite to **77 passing tests on both Windows and Linux**, verified the real fast/full explanation flows, fixed stale dashboard state and bounded expensive requests, and cleaned generated caches. See [the pre-push review](artifacts/integration/prepush_review_2026-09-02.md), including its security-review limitations and remaining PRD gaps.
+The September 2 pre-push review increased the suite to **77 passing tests on both Windows and Linux**, verified the real fast/full explanation flows, fixed stale dashboard state and bounded expensive requests, and cleaned generated caches. See [the pre-push review](artifacts/integration/prepush_review_2026-09-02.md), including its security-review limitations at that time.
+
+The SIH26139 evidence closure on 2026-09-04 produced **87 passing tests**, a separately passing 20-epoch VQC cost-decrease regression, complete malignant-positive classical reports, fold-isolated five-fold evidence, classical SHAP/LIME, a named runtime manifest, and a browser walkthrough of CSV ingestion and all fast/classical attribution scopes. See [the completion record](artifacts/integration/phase7_completion_2026-09-04.md). Docker Desktop itself failed to start during this final run because its Windows host could not recreate a local Unix-socket reparse point; the app was therefore reverified through the pinned local Python runtime. This host failure did not change project files, and no factory reset was performed.
 
 ## Containers
 
