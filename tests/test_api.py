@@ -43,6 +43,10 @@ class StubRuntime:
             "quantum_members": 6,
             "classical_models": 8,
             "runtime_configuration": {
+                "configuration_id": "qtrace-wbcd-s42-e100-q20-v1",
+                "manifest": "artifacts/models/runtime_manifest.json",
+                "loading_mode": "deterministic_refit_from_manifest",
+                "quantum_device": "lightning.qubit",
                 "seed": 42, "vqc_epochs": 100,
                 "quantum_training_limit": 20, "classical_training_rows": 455,
             },
@@ -145,26 +149,35 @@ class StubRuntime:
             },
         }
 
+    def ingest_payload(self, record: dict[str, float]) -> dict[str, Any]:
+        names = [f"clinical feature {index}" for index in range(30)]
+        assert set(record) == set(names)
+        return {
+            "feature_names": names,
+            "features": [record[name] for name in names],
+            "warnings": [],
+        }
+
     def explain_payload(
         self,
         features: list[float],
         *,
+        model: str,
         allow_slow: bool,
     ) -> dict[str, Any]:
         assert features == FEATURES
-        scope = "full_ensemble" if allow_slow else "vqc_fast"
-        names = self.health_payload()["selected_features"]
+        if model == "quantum":
+            scope = "full_ensemble" if allow_slow else "vqc_fast"
+            names = self.health_payload()["selected_features"]
+        else:
+            scope = model
+            names = ([f"clinical feature {index}" for index in range(30)] if model == "classical_full_feature" else self.health_payload()["selected_features"])
         return {
             "scope": scope,
             "feature_names": names,
-            "shap_values": [0.12, -0.08, 0.04, -0.02],
-            "lime_values": [0.10, -0.07, 0.03, -0.01],
-            "directions": [
-                "toward_benign",
-                "toward_malignant",
-                "toward_benign",
-                "toward_malignant",
-            ],
+            "shap_values": [0.12 if index == 0 else 0.0 for index in range(len(names))],
+            "lime_values": [0.10 if index == 0 else 0.0 for index in range(len(names))],
+            "directions": ["toward_benign" if index == 0 else "neutral" for index in range(len(names))],
             "top_features": [
                 {
                     "feature_name": names[0],
@@ -180,7 +193,7 @@ class StubRuntime:
 
     def baselines_payload(self) -> dict[str, Any]:
         return {
-            "positive_class": "benign",
+            "positive_class": "malignant",
             "configurations": {
                 "full_feature": {"feature_count": 30, "models": {}},
                 "same_4_feature": {"feature_count": 4, "models": {}},
@@ -304,6 +317,38 @@ def test_explain_is_attribution_only_and_slow_scope_is_explicit() -> None:
     assert forbidden.isdisjoint(keys_recursively(deep.json()))
 
 
+def test_classical_explanations_use_real_feature_names_and_no_second_verdict() -> None:
+    forbidden = {"confidence", "probability", "benign_probability", "prediction_probability"}
+    with _client() as client:
+        full = client.post(
+            "/explain",
+            json={"features": FEATURES, "model": "classical_full_feature"},
+        )
+        matched = client.post(
+            "/explain",
+            json={"features": FEATURES, "model": "classical_same_4_feature"},
+        )
+
+    assert full.status_code == matched.status_code == 200
+    assert full.json()["scope"] == "classical_full_feature"
+    assert matched.json()["scope"] == "classical_same_4_feature"
+    assert len(full.json()["feature_names"]) == 30
+    assert len(matched.json()["feature_names"]) == 4
+    assert all(not name.startswith("feature_") for name in full.json()["feature_names"])
+    assert forbidden.isdisjoint(full.json())
+
+
+def test_named_record_ingestion_orders_features_and_reports_range_warnings() -> None:
+    names = [f"clinical feature {index}" for index in range(30)]
+    record = {name: FEATURES[index] for index, name in enumerate(names)}
+    with _client() as client:
+        response = client.post("/ingest", json={"record": record})
+
+    assert response.status_code == 200
+    assert response.json()["features"] == FEATURES
+    assert response.json()["feature_names"] == names
+
+
 def test_feature_validation_rejects_wrong_shape_and_non_finite_values() -> None:
     with _client() as client:
         too_short = client.post("/predict", json={"features": FEATURES[:-1]})
@@ -381,10 +426,10 @@ def test_busy_explanation_rejects_new_inference_without_blocking_health() -> Non
     entered, release = Event(), Event()
 
     class BusyRuntime(StubRuntime):
-        def explain_payload(self, features: list[float], *, allow_slow: bool) -> dict[str, Any]:
+        def explain_payload(self, features: list[float], *, model: str, allow_slow: bool) -> dict[str, Any]:
             entered.set()
             assert release.wait(timeout=5), "test must release the simulated explanation"
-            return super().explain_payload(features, allow_slow=allow_slow)
+            return super().explain_payload(features, model=model, allow_slow=allow_slow)
 
     with TestClient(create_app(runtime=BusyRuntime())) as client, ThreadPoolExecutor(max_workers=1) as pool:
         first = pool.submit(client.post, "/explain", json={"features": FEATURES})
@@ -434,3 +479,5 @@ def test_health_reports_actual_runtime_configuration_before_training() -> None:
     assert config["vqc_epochs"] == runtime.vqc_epochs
     assert config["quantum_training_limit"] == runtime.training_limit
     assert config["classical_training_rows"] == 0
+    assert config["configuration_id"] == "qtrace-wbcd-s42-e100-q20-v1"
+    assert config["loading_mode"] == "deterministic_refit_from_manifest"

@@ -5,6 +5,7 @@
   --quantum-indigo: #4A3F8C;
   --caution-amber: #B8863D;
   --line: #D7DCDD;
+  --line-strong: #B8C1C3;
   --surface: #FFFFFF;
   --muted: #647078;
   --subtle: #F8FAF9;
@@ -86,6 +87,26 @@ main { max-width: 1408px; margin: 0 auto; padding: 28px 28px 40px; }
 .select-shell select:hover:not(:disabled) { border-color: var(--quantum-indigo); }
 .select-shell svg { pointer-events: none; width: 15px; height: 15px; position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: #78838B; }
 .field-help { font-size: 11px; line-height: 1.5; color: var(--muted); margin-top: 8px; min-height: 32px; }
+.csv-ingestion { margin: 10px 0 14px; padding: 12px; border: 1px solid var(--line); background: #f8faf9; }
+.csv-ingestion input[type="file"] { width: 100%; margin: 5px 0 2px; font: 500 0.82rem/1.4 "Source Sans 3", sans-serif; color: var(--ink); }
+.secondary-button { margin-top: 8px; border: 1px solid var(--line-strong); background: #fff; color: var(--ink); padding: 8px 10px; font: 600 0.78rem/1.2 "Source Sans 3", sans-serif; cursor: pointer; }
+.secondary-button:hover { border-color: var(--quantum-indigo); color: var(--quantum-indigo); }
+.ingestion-warnings { margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--caution-amber); background: #fff9ed; color: #684b17; font-size: 0.8rem; }
+.clinical-evidence { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin-top: 16px; background: var(--line); border: 1px solid var(--line); }
+.clinical-evidence > div { display: grid; gap: 5px; padding: 14px; background: #fff; }
+.clinical-evidence strong { font-size: 0.86rem; }
+.clinical-evidence span { color: var(--muted); font-size: 0.79rem; line-height: 1.4; }
+.cv-comparison { margin-top: 16px; border: 1px solid var(--line); background: var(--surface); }
+.cv-comparison-head { display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.cv-comparison-head strong { font-size: 0.84rem; }
+.cv-comparison-head span { color: var(--muted); font-size: 0.75rem; }
+.table-scroll { overflow-x: auto; }
+.cv-comparison table { width: 100%; border-collapse: collapse; min-width: 650px; font-size: 0.76rem; }
+.cv-comparison th, .cv-comparison td { padding: 10px 14px; text-align: right; border-bottom: 1px solid #EDF0EF; }
+.cv-comparison thead th { color: var(--muted); font: 500 0.66rem var(--font-mono); letter-spacing: .04em; text-transform: uppercase; background: var(--subtle); }
+.cv-comparison th:first-child, .cv-comparison td:first-child { text-align: left; }
+.cv-comparison tbody th { color: #46555F; font-weight: 600; }
+.cv-comparison tbody tr:last-child > * { border-bottom: 0; }
 .record-meta { margin: 20px 0; display: grid; gap: 7px; font-size: 12px; }
 .record-meta div { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .record-meta dt { color: var(--muted); }
@@ -314,6 +335,7 @@ footer strong { color: #67747B; font-family: var(--font-display); letter-spacing
   footer p { display: none; }
 }
 @media (max-width: 720px) {
+  .clinical-evidence { grid-template-columns: 1fr; }
   .site-header { height: 65px; }
   .header-inner { padding: 0 18px; gap: 16px; }
   .brand strong { font-size: 16px; }

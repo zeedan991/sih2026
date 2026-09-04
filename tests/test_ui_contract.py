@@ -51,6 +51,30 @@ def test_frontend_explanation_is_attribution_only_with_explicit_slow_opt_in() ->
     assert "benign_probability" not in source[source.index("function renderExplanation") :]
     assert "70 seconds or longer" in source
     assert "forceDisagreement" in source
+    assert '"classical_full_feature"' in source
+    assert '"classical_same_4_feature"' in source
+
+
+def test_judge_frontend_supports_named_csv_ingestion() -> None:
+    html = (PROJECT_ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    source = (PROJECT_ROOT / "frontend" / "app.js").read_text(encoding="utf-8")
+
+    assert 'id="patient-source"' in html
+    assert 'id="csv-file"' in html
+    assert 'id="csv-example"' in html
+    assert 'id="ingestion-warnings"' in html
+    assert 'fetchJson("/ingest"' in source
+    assert "parseCsvRecord" in source
+
+
+def test_frontend_surfaces_malignant_sensitivity_and_cross_validation() -> None:
+    html = (PROJECT_ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    source = (PROJECT_ROOT / "frontend" / "app.js").read_text(encoding="utf-8")
+
+    assert 'id="clinical-evidence"' in html
+    assert "malignant sensitivity" in html.lower()
+    assert "five-fold" in html.lower()
+    assert 'fetchJson("/metrics"' in source
 
 
 def test_clinical_workspace_preserves_the_complete_dom_binding_contract() -> None:
@@ -75,7 +99,7 @@ def test_patient_and_scope_are_locked_during_async_requests() -> None:
     assert "elements.patientSelect.disabled = busy" in source
     assert "option.disabled = busy" in source
     assert "generation === state.generation" in source
-    assert "selectExplanationScope(false)" in source
+    assert 'selectExplanationScope("quantum-fast")' in source
 
 
 def test_attribution_measurements_come_from_the_raw_patient_record() -> None:

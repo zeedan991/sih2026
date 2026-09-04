@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "configuration_id": "qtrace-wbcd-s42-e100-q20-v1",
+  "dataset": "sklearn Wisconsin Breast Cancer Diagnostic",
+  "dataset_rows": 569,
+  "split_seed": 42,
+  "test_size": 0.2,
+  "vqc_epochs": 100,
+  "quantum_training_limit": 20,
+  "classical_training_rows": 455,
+  "quantum_device": "lightning.qubit",
+  "quantum_members": [
+    "vqc_4q_3l_cnot",
+    "vqc_3q_2l_cnot",
+    "vqc_4q_2l_cz",
+    "vqc_4q_3l_cz_reversed",
+    "qsvm_angle_4q",
+    "qsvm_amplitude_2q"
+  ],
+  "preprocessing": "median imputation -> standard scaling -> SelectKBest(f_classif,k=4) -> inward quantum scaling",
+  "loading_mode": "deterministic_refit_from_manifest",
+  "note": "This manifest identifies the live demonstration configuration. It is not the separate 200-row three-seed benchmark and does not contain patient data."
+}

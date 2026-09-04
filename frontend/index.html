@@ -38,10 +38,19 @@
       <aside class="patient-panel panel" aria-labelledby="patient-panel-title">
         <div class="panel-heading"><span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 4H5v17h14V4h-3M9 2h6v4H9zM8 11h8M8 15h5"/></svg></span><div><h2 id="patient-panel-title">Patient record</h2><p>Held-out evaluation data</p></div></div>
         <div class="patient-panel-body">
-          <label class="field-label" for="patient-select">Select study record</label>
+          <label class="field-label" for="patient-source">Data source</label>
+          <div class="select-shell"><select id="patient-source" disabled><option value="catalog">Held-out benchmark record</option><option value="csv">Upload named CSV record</option></select><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></div>
+          <div class="csv-ingestion" id="csv-ingestion" hidden>
+            <label class="field-label" for="csv-file">One-row clinical CSV</label>
+            <input id="csv-file" type="file" accept=".csv,text/csv" />
+            <button class="secondary-button" id="csv-example" type="button">Download example CSV</button>
+            <p class="field-help">The header must contain all 30 WBCD feature names exactly. Values outside the benchmark's observed range are flagged, not silently rejected.</p>
+            <div class="ingestion-warnings" id="ingestion-warnings" hidden role="status"></div>
+          </div>
+          <label class="field-label" id="patient-select-label" for="patient-select">Select study record</label>
           <div class="select-shell"><select id="patient-select" disabled><option>Waiting for models…</option></select><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></div>
           <p class="field-help" id="patient-help">The model service is initializing. Controls will become available when it is ready.</p>
-          <dl class="record-meta"><div><dt>Source</dt><dd>Wisconsin Breast Cancer</dd></div><div><dt>Partition</dt><dd><span class="subtle-dot"></span>Held-out test set</dd></div><div><dt>Record</dt><dd id="record-id">—</dd></div></dl>
+          <dl class="record-meta"><div><dt>Source</dt><dd id="record-source">Wisconsin Breast Cancer</dd></div><div><dt>Partition</dt><dd id="record-partition"><span class="subtle-dot"></span>Held-out test set</dd></div><div><dt>Record</dt><dd id="record-id">—</dd></div></dl>
           <div class="selected-signal" aria-live="polite">
             <div class="selected-signal-head"><h3>Selected measurements</h3><span>Raw values</span></div>
             <div class="feature-chips" id="selected-feature-chips"><div class="chip-skeleton"></div><div class="chip-skeleton"></div><div class="chip-skeleton"></div><div class="chip-skeleton"></div></div>
@@ -89,8 +98,10 @@
           <p class="explain-intro">Inspect the direction and relative contribution of each clinical input. The primary model result above remains unchanged.</p>
           <div class="explanation-controls">
             <div class="scope-control" role="group" aria-label="Explanation depth">
-              <button class="scope-option is-selected" type="button" data-scope="fast" aria-pressed="true"><span class="scope-radio" aria-hidden="true"></span><span><strong>Fast attribution <em>DEFAULT</em></strong><small>VQC sub-ensemble · ~7–30 s</small></span></button>
-              <button class="scope-option" type="button" data-scope="deep" aria-pressed="false"><span class="scope-radio" aria-hidden="true"></span><span><strong>Full ensemble</strong><small>All six models · 70 s or longer</small></span></button>
+              <button class="scope-option is-selected" type="button" data-scope="quantum-fast" aria-pressed="true"><span class="scope-radio" aria-hidden="true"></span><span><strong>Quantum fast <em>DEFAULT</em></strong><small>VQC sub-ensemble · ~7–30 s</small></span></button>
+              <button class="scope-option" type="button" data-scope="quantum-deep" aria-pressed="false"><span class="scope-radio" aria-hidden="true"></span><span><strong>Quantum full</strong><small>All six models · 70 s or longer</small></span></button>
+              <button class="scope-option" type="button" data-scope="classical-full" aria-pressed="false"><span class="scope-radio" aria-hidden="true"></span><span><strong>Classical full</strong><small>LogReg · all 30 features</small></span></button>
+              <button class="scope-option" type="button" data-scope="classical-same" aria-pressed="false"><span class="scope-radio" aria-hidden="true"></span><span><strong>Classical matched</strong><small>LogReg · same 4 features</small></span></button>
             </div>
             <button class="explain-button" id="explain-button" type="button"><span>Generate attribution</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></button>
           </div>
@@ -109,6 +120,15 @@
       <div class="evidence-heading"><div><p class="eyebrow">VALIDATION RECORD</p><h2 id="evidence-title">Methodology &amp; evidence</h2></div><span class="method-badge">3 seeds · 100 epochs · 200-row training pool</span></div>
       <div class="evidence-grid"><div><span>QUANTUM ENSEMBLE</span><strong>93.86–94.74<span>%</span></strong><small>Held-out accuracy range</small></div><div><span>STRONGEST QUANTUM MEMBER</span><strong>93.86–94.74<span>%</span></strong><small>Angle-embedding QSVM</small></div><div><span>PAIRED COMPARISON</span><strong>p &gt; 0.56</strong><small>No significant difference detected</small></div></div>
       <div class="evidence-note"><strong>Stable results, not a superiority claim.</strong><p>The ensemble reduced the observed VQC-family variability and statistically tied the strongest individual quantum model rather than beating it. Classical baselines are retained in both full-feature and same-four-feature configurations.</p></div>
+      <div class="clinical-evidence" id="clinical-evidence" aria-live="polite">
+        <div><strong>Malignant sensitivity &amp; specificity</strong><span id="clinical-metric-status">Loading retained disease-oriented metrics…</span></div>
+        <div><strong>Five-fold generalization</strong><span id="cv-status">Loading leakage-safe cross-validation evidence…</span></div>
+        <div><strong>Computational efficiency</strong><span id="efficiency-status">Loading measured fit and inference timings…</span></div>
+      </div>
+      <div class="cv-comparison" aria-live="polite">
+        <div class="cv-comparison-head"><strong>Leakage-safe five-fold comparison</strong><span>Malignant is the positive condition</span></div>
+        <div class="table-scroll"><table><thead><tr><th>Model view</th><th>Accuracy</th><th>Sensitivity</th><th>Specificity</th><th>ROC-AUC</th></tr></thead><tbody id="cv-comparison-body"><tr><td colspan="5">Loading retained fold metrics…</td></tr></tbody></table></div>
+      </div>
     </section>
   </main>
   <footer><span><strong>Q-TRACE</strong> <span>Hybrid quantum-classical research</span></span><p>Simulator-based · Wisconsin Breast Cancer Dataset</p><span class="footer-disclaimer">Research prototype. Not for clinical use.</span></footer>

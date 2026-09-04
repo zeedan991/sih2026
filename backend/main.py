@@ -33,8 +33,10 @@ class RuntimeContract(Protocol):
 
     def predict_payload(self, features: list[float]) -> dict[str, Any]: ...
 
+    def ingest_payload(self, record: dict[str, float]) -> dict[str, Any]: ...
+
     def explain_payload(
-        self, features: list[float], *, allow_slow: bool
+        self, features: list[float], *, model: str, allow_slow: bool
     ) -> dict[str, Any]: ...
 
     def baselines_payload(self) -> dict[str, Any]: ...
@@ -58,11 +60,43 @@ class FeatureRequest(StrictRequest):
 
 
 class ExplainRequest(FeatureRequest):
-    model: Literal["quantum"] = "quantum"
+    model: Literal[
+        "quantum", "classical_full_feature", "classical_same_4_feature"
+    ] = "quantum"
     allow_slow: bool = False
 
 
+class NamedRecordRequest(StrictRequest):
+    record: dict[str, float] = Field(min_length=30, max_length=30)
+
+    @field_validator("record")
+    @classmethod
+    def finite_record(cls, values: dict[str, float]) -> dict[str, float]:
+        if not all(
+            name.strip() and math.isfinite(value) for name, value in values.items()
+        ):
+            raise ValueError("record names must be non-empty and values must be finite")
+        return values
+
+
+class RangeWarning(BaseModel):
+    feature_name: str
+    value: float
+    observed_min: float
+    observed_max: float
+
+
+class IngestResponse(BaseModel):
+    feature_names: list[str] = Field(min_length=30, max_length=30)
+    features: list[float] = Field(min_length=30, max_length=30)
+    warnings: list[RangeWarning]
+
+
 class RuntimeConfiguration(BaseModel):
+    configuration_id: str | None = None
+    manifest: str | None = None
+    loading_mode: str | None = None
+    quantum_device: str | None = None
     seed: int
     vqc_epochs: int
     quantum_training_limit: int
@@ -144,13 +178,18 @@ class ExplanationFeature(BaseModel):
 class ExplainResponse(BaseModel):
     """Attribution only: deliberately no confidence/probability field (D-23)."""
 
-    scope: Literal["vqc_fast", "full_ensemble"]
-    feature_names: list[str] = Field(min_length=4, max_length=4)
-    shap_values: list[float] = Field(min_length=4, max_length=4)
-    lime_values: list[float] = Field(min_length=4, max_length=4)
+    scope: Literal[
+        "vqc_fast",
+        "full_ensemble",
+        "classical_full_feature",
+        "classical_same_4_feature",
+    ]
+    feature_names: list[str] = Field(min_length=4, max_length=30)
+    shap_values: list[float] = Field(min_length=4, max_length=30)
+    lime_values: list[float] = Field(min_length=4, max_length=30)
     directions: list[
         Literal["toward_benign", "toward_malignant", "neutral"]
-    ] = Field(min_length=4, max_length=4)
+    ] = Field(min_length=4, max_length=30)
     top_features: list[ExplanationFeature]
     expected_timing: str
     elapsed_seconds: float = Field(ge=0.0)
@@ -163,7 +202,7 @@ class BaselineConfiguration(BaseModel):
 
 
 class BaselinesResponse(BaseModel):
-    positive_class: Literal["benign"]
+    positive_class: Literal["malignant"]
     runtime_split_note: str | None = None
     configurations: dict[str, BaselineConfiguration]
 
@@ -180,7 +219,7 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
 
     application = FastAPI(
         title="Q-Trace | SIH26139 Hybrid Disease Detection",
-        version="0.4.0",
+        version="0.5.0",
         description=(
             "Research prototype: six-model quantum ensemble benchmarked beside "
             "classical models on the Wisconsin Breast Cancer dataset."
@@ -264,6 +303,17 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
         return ready_call(active_runtime.patients_payload, limit)
 
     @application.post(
+        "/ingest",
+        response_model=IngestResponse,
+        tags=["data"],
+    )
+    def ingest(request: NamedRecordRequest) -> dict[str, Any]:
+        try:
+            return ready_call(active_runtime.ingest_payload, request.record)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @application.post(
         "/predict",
         response_model=PredictResponse,
         tags=["inference"],
@@ -277,13 +327,15 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
         tags=["explainability"],
     )
     def explain(request: ExplainRequest) -> dict[str, Any]:
-        # ``model`` is deliberately constrained to quantum.  Scope is selected
-        # only by allow_slow, matching architecture section 4 and D-23.
-        return inference_call(
-            active_runtime.explain_payload,
-            request.features,
-            allow_slow=request.allow_slow,
-        )
+        try:
+            return inference_call(
+                active_runtime.explain_payload,
+                request.features,
+                model=request.model,
+                allow_slow=request.allow_slow,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
     @application.get(
         "/baselines",
@@ -318,6 +370,7 @@ app = create_app()
 __all__ = [
     "ExplainResponse",
     "FeatureRequest",
+    "IngestResponse",
     "PredictResponse",
     "app",
     "create_app",

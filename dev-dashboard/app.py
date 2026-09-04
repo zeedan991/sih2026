@@ -132,14 +132,51 @@ with prediction_tab:
         st.stop()
 
     patients = catalog["patients"]
-    selected_patient = st.selectbox(
-        "Held-out WBCD patient",
-        patients,
-        format_func=lambda patient: (
-            f'{patient["name"]}'
-            + (" · model disagreement" if patient["has_disagreement"] else "")
-        ),
+    source_mode = st.radio(
+        "Input source",
+        ("Held-out benchmark record", "Named one-row CSV"),
+        horizontal=True,
     )
+    if source_mode == "Held-out benchmark record":
+        selected_patient = st.selectbox(
+            "Held-out WBCD patient",
+            patients,
+            format_func=lambda patient: (
+                f'{patient["name"]}'
+                + (" · model disagreement" if patient["has_disagreement"] else "")
+            ),
+        )
+    else:
+        uploaded = st.file_uploader("Upload a one-row CSV with the exact 30 feature names", type="csv")
+        if uploaded is None:
+            st.info("Upload one named record to enable inference.")
+            st.stop()
+        frame = pd.read_csv(uploaded)
+        if frame.shape != (1, 30):
+            st.error("The CSV must contain exactly one row and 30 columns.")
+            st.stop()
+        try:
+            validated = api_json(
+                "/ingest",
+                method="POST",
+                payload={"record": {name: float(frame.iloc[0][name]) for name in frame.columns}},
+            )
+        except (RuntimeError, ValueError) as error:
+            st.error(str(error))
+            st.stop()
+        selected_positions = [validated["feature_names"].index(name) for name in catalog["selected_feature_names"]]
+        selected_patient = {
+            "id": "uploaded",
+            "name": "Uploaded clinical record",
+            "true_label": None,
+            "features": validated["features"],
+            "selected_values": [validated["features"][position] for position in selected_positions],
+            "has_disagreement": False,
+        }
+        if validated["warnings"]:
+            st.warning(f'{len(validated["warnings"])} value(s) fall outside the benchmark observed ranges.')
+        else:
+            st.success("CSV schema and observed ranges validated.")
     previous_patient = st.session_state.get("dev_patient")
     if previous_patient and previous_patient["id"] != selected_patient["id"]:
         for key in ("dev_prediction", "dev_patient", "dev_explanation"):
@@ -215,14 +252,25 @@ with prediction_tab:
             )
 
         st.divider()
-        st.subheader("Explain the quantum attribution")
-        deep = st.toggle(
-            "Use full six-model explanation",
-            key="dev_deep",
-            help="Off: VQC-only, approximately 7–30s. On: includes QSVMs, typically 70s+.",
+        st.subheader("Explain model attribution")
+        explanation_choice = st.selectbox(
+            "Explanation scope",
+            (
+                "Quantum · VQC fast",
+                "Quantum · full six-model ensemble",
+                "Classical · full 30-feature LogReg",
+                "Classical · matched 4-feature LogReg",
+            ),
         )
+        deep = explanation_choice == "Quantum · full six-model ensemble"
+        explanation_model = {
+            "Classical · full 30-feature LogReg": "classical_full_feature",
+            "Classical · matched 4-feature LogReg": "classical_same_4_feature",
+        }.get(explanation_choice, "quantum")
         previous_explanation = st.session_state.get("dev_explanation")
-        selected_scope = "full_ensemble" if deep else "vqc_fast"
+        selected_scope = (
+            "full_ensemble" if deep else explanation_model if explanation_model != "quantum" else "vqc_fast"
+        )
         if previous_explanation and previous_explanation["scope"] != selected_scope:
             st.session_state.pop("dev_explanation", None)
         if deep:
@@ -250,7 +298,7 @@ with prediction_tab:
                         method="POST",
                         payload={
                             "features": current_patient["features"],
-                            "model": "quantum",
+                            "model": explanation_model,
                             "allow_slow": deep,
                         },
                     )
@@ -296,6 +344,8 @@ with benchmark_tab:
         st.dataframe(frame, hide_index=True, width="stretch")
     with st.expander("Verified three-seed quantum record"):
         st.json(metrics_payload["quantum"])
+    with st.expander("Leakage-safe generalization and clinical metrics"):
+        st.json(metrics_payload.get("generalization", {}))
 
 with raw_tab:
     st.caption("Useful when diagnosing response-shape or label-direction issues.")

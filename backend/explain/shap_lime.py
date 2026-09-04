@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from types import SimpleNamespace
 from typing import Callable, Final, Literal, Protocol, Sequence
 
 import numpy as np
@@ -25,6 +26,8 @@ ExplanationScope = Literal[
     "fast_vqc",
     "full_ensemble",
     "qsvm_diagnostic",
+    "classical_full_feature",
+    "classical_same_4_feature",
 ]
 ProgressState = Literal["computing", "complete", "failed"]
 AttributionDirection = Literal["toward_benign", "toward_malignant", "neutral"]
@@ -788,10 +791,83 @@ class ExplainabilityService:
         )
 
 
+class ClassicalExplainabilityService:
+    """SHAP + LIME for one fitted classical probability estimator.
+
+    The implementation reuses the validated model-agnostic explainability path
+    while retaining the classical scope and all original clinical feature
+    names in the public result.
+    """
+
+    def __init__(
+        self,
+        estimator: object,
+        training_features: ArrayLike,
+        feature_names: Sequence[str],
+        *,
+        scope: Literal["classical_full_feature", "classical_same_4_feature"],
+        background_size: int = DEFAULT_BACKGROUND_SIZE,
+        shap_nsamples: int = DEFAULT_SHAP_NSAMPLES,
+        lime_num_samples: int = DEFAULT_LIME_NUM_SAMPLES,
+        random_state: int = 42,
+    ) -> None:
+        if scope not in ("classical_full_feature", "classical_same_4_feature"):
+            raise ValueError("invalid classical explanation scope")
+        classes = np.asarray(getattr(estimator, "classes_", ()), dtype=int)
+        matches = np.flatnonzero(classes == 1)
+        if matches.size != 1 or not hasattr(estimator, "predict_proba"):
+            raise ValueError("classical explainer requires benign-class probabilities")
+        class_index = int(matches[0])
+
+        class Member:
+            name = scope
+            paradigm = "VQC"
+            weight = 1.0
+
+            @staticmethod
+            def predict_benign_proba(features: FloatArray) -> FloatArray:
+                probabilities = np.asarray(estimator.predict_proba(features), dtype=float)
+                return probabilities[:, class_index]
+
+        matrix = np.asarray(training_features, dtype=float)
+        names = _validated_feature_names(feature_names, expected_count=matrix.shape[1])
+        self.scope = scope
+        self._delegate = ExplainabilityService(
+            SimpleNamespace(members=(Member(),)),
+            SimpleNamespace(X_train_quantum=matrix, selected_feature_names=names),
+            background_size=background_size,
+            shap_nsamples=shap_nsamples,
+            lime_num_samples=lime_num_samples,
+            random_state=random_state,
+        )
+
+    def explain(self, patient_features: ArrayLike) -> CombinedExplanation:
+        """Return attribution only metadata for the configured classical view."""
+
+        result = self._delegate.explain(patient_features, scope="fast_vqc")
+        timing = "a few seconds"
+        shap_result = replace(result.shap, scope=self.scope)
+        lime_result = replace(result.lime, scope=self.scope)
+        events = tuple(
+            replace(event, scope=self.scope, expected_timing=timing)
+            for event in result.progress_events
+        )
+        return replace(
+            result,
+            scope=self.scope,
+            member_names=(self.scope,),
+            expected_timing=timing,
+            shap=shap_result,
+            lime=lime_result,
+            progress_events=events,
+        )
+
+
 __all__ = [
     "AttributionCrossCheck",
     "AttributionSignComparison",
     "CombinedExplanation",
+    "ClassicalExplainabilityService",
     "DEFAULT_BACKGROUND_SIZE",
     "DEFAULT_LIME_NUM_SAMPLES",
     "DEFAULT_SHAP_NSAMPLES",

@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from backend.explain import shap_lime
-from backend.explain.shap_lime import ExplainabilityService
+from backend.explain.shap_lime import ClassicalExplainabilityService, ExplainabilityService
 
 
 CLINICAL_NAMES = np.asarray(
@@ -20,6 +20,35 @@ CLINICAL_NAMES = np.asarray(
         "worst concave points",
     ]
 )
+
+
+def test_classical_shap_and_lime_keep_real_clinical_feature_names() -> None:
+    from backend.classical.baselines import train_evaluate_baselines
+    from backend.data.pipeline import prepare_breast_cancer_data
+
+    prepared = prepare_breast_cancer_data(random_state=42)
+    estimator = train_evaluate_baselines(
+        prepared,
+        random_state=42,
+        model_names=("logistic_regression",),
+    )["same_4_feature"]["logistic_regression"].estimator
+    service = ClassicalExplainabilityService(
+        estimator,
+        prepared.X_train_selected,
+        prepared.selected_feature_names,
+        scope="classical_same_4_feature",
+        background_size=8,
+        shap_nsamples=8,
+        lime_num_samples=80,
+        random_state=42,
+    )
+
+    result = service.explain(prepared.X_test_selected[0])
+
+    assert result.scope == "classical_same_4_feature"
+    assert result.shap.feature_names == tuple(prepared.selected_feature_names)
+    assert result.lime.feature_names == tuple(prepared.selected_feature_names)
+    assert not any(name.startswith("feature_") for name in result.shap.feature_names)
 BACKGROUND = np.asarray(
     [
         [0.10, 0.20, 0.30, 0.40],

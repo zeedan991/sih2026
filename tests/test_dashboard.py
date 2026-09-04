@@ -29,7 +29,13 @@ def dashboard(monkeypatch):
             payload = runtime.predict_payload(json.loads(request.data)["features"])
         elif path == "/explain":
             body = json.loads(request.data)
-            payload = runtime.explain_payload(body["features"], allow_slow=body["allow_slow"])
+            payload = runtime.explain_payload(
+                body["features"],
+                model=body["model"],
+                allow_slow=body["allow_slow"],
+            )
+        elif path == "/ingest":
+            payload = runtime.ingest_payload(json.loads(request.data)["record"])
         elif path == "/baselines":
             payload = runtime.baselines_payload()
         elif path == "/metrics":
@@ -59,7 +65,7 @@ def test_switching_explanation_scope_clears_old_attribution(dashboard):
     dashboard.button[0].click().run()
     dashboard.button[1].click().run()
     assert dashboard.session_state["dev_explanation"]["scope"] == "vqc_fast"
-    dashboard.toggle[0].set_value(True).run()
+    dashboard.selectbox[1].select_index(1).run()
     assert not dashboard.exception
     assert "dev_explanation" not in dashboard.session_state
 

@@ -10,7 +10,9 @@ from __future__ import annotations
 import math
 import os
 import threading
+import json
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any, Final
 
 import numpy as np
@@ -27,7 +29,7 @@ from backend.data.pipeline import (
     prediction_to_label,
     prepare_breast_cancer_data,
 )
-from backend.explain.shap_lime import ExplainabilityService
+from backend.explain.shap_lime import ClassicalExplainabilityService, ExplainabilityService
 from backend.quantum.train import (
     CARRIED_SAME4_CLASSICAL_MEAN_ACCURACIES,
     MINIMUM_PHASE2_EPOCHS,
@@ -41,6 +43,9 @@ DEFAULT_TRAINING_LIMIT: Final[int] = 20
 DEFAULT_BACKGROUND_SIZE: Final[int] = 50
 DEFAULT_SHAP_NSAMPLES: Final[int] = 60
 DEFAULT_LIME_NUM_SAMPLES: Final[int] = 1_000
+DEFAULT_RUNTIME_MANIFEST: Final[Path] = (
+    Path(__file__).resolve().parent.parent / "artifacts" / "models" / "runtime_manifest.json"
+)
 
 VERIFIED_PHASE2_QUANTUM: Final[dict[str, Any]] = {
     "source": "artifacts/models/phase2_benchmark_100epochs_200pool.md",
@@ -112,14 +117,27 @@ class ModelRuntime:
     """Thread-safe holder for fitted preprocessing, quantum, and classical models."""
 
     def __init__(self) -> None:
+        manifest_path = Path(os.getenv("QML_RUNTIME_MANIFEST", str(DEFAULT_RUNTIME_MANIFEST)))
+        if not manifest_path.exists():
+            raise ValueError(f"runtime manifest does not exist: {manifest_path}")
+        self.runtime_manifest_path = manifest_path
+        self.runtime_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest_seed = int(self.runtime_manifest["split_seed"])
+        manifest_epochs = int(self.runtime_manifest["vqc_epochs"])
+        manifest_limit = int(self.runtime_manifest["quantum_training_limit"])
+        self.quantum_device = os.getenv(
+            "QML_QUANTUM_DEVICE", str(self.runtime_manifest["quantum_device"])
+        ).strip()
+        if not self.quantum_device:
+            raise ValueError("QML_QUANTUM_DEVICE must be non-empty")
         self.seed = _environment_integer(
-            "QML_MODEL_SEED", DEFAULT_MODEL_SEED, minimum=0
+            "QML_MODEL_SEED", manifest_seed, minimum=0
         )
         self.vqc_epochs = _environment_integer(
-            "QML_VQC_EPOCHS", MINIMUM_PHASE2_EPOCHS, minimum=MINIMUM_PHASE2_EPOCHS
+            "QML_VQC_EPOCHS", manifest_epochs, minimum=MINIMUM_PHASE2_EPOCHS
         )
         self.training_limit = _environment_integer(
-            "QML_TRAINING_LIMIT", DEFAULT_TRAINING_LIMIT, minimum=20
+            "QML_TRAINING_LIMIT", manifest_limit, minimum=20
         )
         self.background_size = _environment_integer(
             "QML_EXPLANATION_BACKGROUND_SIZE",
@@ -186,6 +204,7 @@ class ModelRuntime:
                 vqc_epochs=self.vqc_epochs,
                 training_sample_limit=self.training_limit,
                 show_progress=False,
+                device_name=self.quantum_device,
             )
             explainability = ExplainabilityService(
                 quantum,
@@ -195,6 +214,28 @@ class ModelRuntime:
                 lime_num_samples=self.lime_num_samples,
                 random_state=self.seed,
             )
+            classical_explainability = {
+                "classical_full_feature": ClassicalExplainabilityService(
+                    classical["full_feature"]["logistic_regression"].estimator,
+                    data.X_train_full,
+                    data.feature_names,
+                    scope="classical_full_feature",
+                    background_size=self.background_size,
+                    shap_nsamples=self.shap_nsamples,
+                    lime_num_samples=self.lime_num_samples,
+                    random_state=self.seed,
+                ),
+                "classical_same_4_feature": ClassicalExplainabilityService(
+                    classical["same_4_feature"]["logistic_regression"].estimator,
+                    data.X_train_selected,
+                    data.selected_feature_names,
+                    scope="classical_same_4_feature",
+                    background_size=self.background_size,
+                    shap_nsamples=self.shap_nsamples,
+                    lime_num_samples=self.lime_num_samples,
+                    random_state=self.seed,
+                ),
+            }
             dataset = load_breast_cancer()
             raw_features = np.asarray(dataset.data, dtype=float)
 
@@ -204,6 +245,7 @@ class ModelRuntime:
                 self.classical = classical
                 self.quantum = quantum
                 self.explainability = explainability
+                self.classical_explainability = classical_explainability
                 self.raw_features = raw_features
                 self._state = "ready"
         except Exception as error:  # surfaced through /health and 503 responses
@@ -228,6 +270,13 @@ class ModelRuntime:
     def health_payload(self) -> dict[str, Any]:
         with self._state_lock:
             ready = self._state == "ready"
+            project_root = Path(__file__).resolve().parent.parent
+            try:
+                manifest_display = str(
+                    self.runtime_manifest_path.relative_to(project_root)
+                )
+            except ValueError:
+                manifest_display = str(self.runtime_manifest_path)
             return {
                 "status": self._state,
                 "models_loaded": ready,
@@ -242,6 +291,10 @@ class ModelRuntime:
                 ),
                 "error": self._error,
                 "runtime_configuration": {
+                    "configuration_id": self.runtime_manifest["configuration_id"],
+                    "manifest": manifest_display,
+                    "loading_mode": self.runtime_manifest["loading_mode"],
+                    "quantum_device": self.quantum_device,
                     "seed": self.seed,
                     "vqc_epochs": self.vqc_epochs,
                     "quantum_training_limit": self.training_limit,
@@ -394,19 +447,34 @@ class ModelRuntime:
         self,
         features: list[float],
         *,
+        model: str,
         allow_slow: bool,
     ) -> dict[str, Any]:
-        data, _classical, _quantum, explainability = self._require_loaded()
-        _full, _selected, quantum_features = data.transform_features(
+        data, _classical, _quantum, quantum_explainability = self._require_loaded()
+        full, selected, quantum_features = data.transform_features(
             np.asarray(features, dtype=float).reshape(1, -1)
         )
-        internal_scope = "full_ensemble" if allow_slow else "fast_vqc"
         with self._inference_lock:
-            explanation = explainability.explain(
-                quantum_features[0],
-                scope=internal_scope,
-                allow_slow=allow_slow,
-            )
+            if model == "quantum":
+                internal_scope = "full_ensemble" if allow_slow else "fast_vqc"
+                explanation = quantum_explainability.explain(
+                    quantum_features[0],
+                    scope=internal_scope,
+                    allow_slow=allow_slow,
+                )
+                public_scope = "full_ensemble" if allow_slow else "vqc_fast"
+            elif model == "classical_full_feature":
+                if allow_slow:
+                    raise ValueError("allow_slow applies only to the quantum ensemble")
+                explanation = self.classical_explainability[model].explain(full[0])
+                public_scope = model
+            elif model == "classical_same_4_feature":
+                if allow_slow:
+                    raise ValueError("allow_slow applies only to the quantum ensemble")
+                explanation = self.classical_explainability[model].explain(selected[0])
+                public_scope = model
+            else:
+                raise ValueError("unknown explanation model")
 
         shap_by_name = {
             item.feature_name: item for item in explanation.shap.attributions
@@ -428,7 +496,7 @@ class ModelRuntime:
                 }
             )
         return {
-            "scope": "full_ensemble" if allow_slow else "vqc_fast",
+            "scope": public_scope,
             "feature_names": feature_names,
             "shap_values": [
                 shap_by_name[name].attribution for name in feature_names
@@ -442,6 +510,47 @@ class ModelRuntime:
             "elapsed_seconds": explanation.elapsed_seconds,
         }
 
+    def ingest_payload(self, record: dict[str, float]) -> dict[str, Any]:
+        """Order a named clinical record and flag values outside benchmark ranges."""
+
+        data, _classical, _quantum, _explainability = self._require_loaded()
+        expected_names = [str(name) for name in data.feature_names]
+        supplied = set(record)
+        expected = set(expected_names)
+        if supplied != expected:
+            missing = sorted(expected - supplied)
+            extra = sorted(supplied - expected)
+            detail = []
+            if missing:
+                detail.append(f"missing: {', '.join(missing)}")
+            if extra:
+                detail.append(f"unexpected: {', '.join(extra)}")
+            raise ValueError(
+                "record must contain the exact 30-feature schema ("
+                + "; ".join(detail)
+                + ")"
+            )
+        ordered = np.asarray([record[name] for name in expected_names], dtype=float)
+        if not np.isfinite(ordered).all():
+            raise ValueError("record values must be finite")
+        minimum = self.raw_features.min(axis=0)
+        maximum = self.raw_features.max(axis=0)
+        warnings = [
+            {
+                "feature_name": expected_names[index],
+                "value": float(value),
+                "observed_min": float(minimum[index]),
+                "observed_max": float(maximum[index]),
+            }
+            for index, value in enumerate(ordered)
+            if value < minimum[index] or value > maximum[index]
+        ]
+        return {
+            "feature_names": expected_names,
+            "features": ordered.tolist(),
+            "warnings": warnings,
+        }
+
     def baselines_payload(self) -> dict[str, Any]:
         _data, classical, _quantum, _explainability = self._require_loaded()
         configurations: dict[str, Any] = {}
@@ -449,14 +558,19 @@ class ModelRuntime:
             model_payload = {}
             for model_name in MODEL_NAMES:
                 metrics = classical[configuration][model_name].metrics
-                model_payload[model_name] = asdict(metrics)
+                result = classical[configuration][model_name]
+                model_payload[model_name] = {
+                    **asdict(metrics),
+                    "fit_seconds": result.fit_seconds,
+                    "predict_seconds": result.predict_seconds,
+                }
             configurations[configuration] = {
                 "feature_count": 30 if configuration == "full_feature" else 4,
                 "runtime_seed": self.seed,
                 "models": model_payload,
             }
         return {
-            "positive_class": "benign",
+            "positive_class": "malignant",
             "runtime_split_note": (
                 "The model rows are this process's held-out seed split; judge-facing "
                 "claims use the verified three-seed ranges in /metrics."
@@ -473,11 +587,23 @@ class ModelRuntime:
             }
             for name, accuracy in CARRIED_SAME4_CLASSICAL_MEAN_ACCURACIES.items()
         }
+        evaluation_root = Path(__file__).resolve().parent.parent / "artifacts" / "evaluation"
+
+        def load_evidence(name: str) -> Any:
+            path = evaluation_root / name
+            if not path.exists():
+                return None
+            return json.loads(path.read_text(encoding="utf-8"))
+
         return {
             "quantum": VERIFIED_PHASE2_QUANTUM,
             "classical": {
                 "same_4_feature_three_seed_means": same4,
                 "source": "decisions.md D-20 and architecture.md section 3.7",
+            },
+            "generalization": {
+                "classical_three_seed": load_evidence("classical_three_seed_metrics.json"),
+                "five_fold_cross_validation": load_evidence("five_fold_cross_validation.json"),
             },
             "positioning": (
                 "Rigorously benchmarked hybrid system; no claim of quantum "
