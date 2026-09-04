@@ -181,6 +181,7 @@ def make_vqc(
     *,
     entangler: EntanglerName | str = "CNOT",
     input_order: Sequence[int] | None = None,
+    device_name: str = "lightning.qubit",
 ) -> qml.QNode:
     """Create an independent data-reuploading VQC on a fresh device.
 
@@ -193,7 +194,9 @@ def make_vqc(
     expected_weight_count = number_of_weights(n_qubits, n_layers)
     resolved_entangler = _validate_entangler(entangler)
     resolved_input_order = _validate_input_order(input_order, n_qubits)
-    device = qml.device("lightning.qubit", wires=n_qubits)
+    if not device_name.strip():
+        raise ValueError("device_name must be non-empty")
+    device = qml.device(device_name, wires=n_qubits)
 
     @qml.qnode(device, interface="autograd")
     def circuit(inputs: np.ndarray, raw_weights: np.ndarray) -> np.ndarray:
@@ -328,6 +331,7 @@ class VQCTrainingResult:
     n_layers: int
     entangler: EntanglerName
     input_order: tuple[int, ...]
+    device_name: str
 
 
 def train_vqc(
@@ -342,6 +346,7 @@ def train_vqc(
     n_epochs: int = DEFAULT_N_EPOCHS,
     learning_rate: float = DEFAULT_LEARNING_RATE,
     initial_weights: Sequence[float] | None = None,
+    device_name: str = "lightning.qubit",
 ) -> VQCTrainingResult:
     """Train one VQC with full-batch Adam and return every epoch's cost.
 
@@ -362,6 +367,7 @@ def train_vqc(
         n_layers,
         entangler=resolved_entangler,
         input_order=resolved_input_order,
+        device_name=device_name,
     )
 
     if initial_weights is None:
@@ -403,6 +409,7 @@ def train_vqc(
         n_layers=n_layers,
         entangler=resolved_entangler,
         input_order=resolved_input_order,
+        device_name=device_name,
     )
 
 

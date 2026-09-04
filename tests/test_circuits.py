@@ -137,6 +137,12 @@ def test_cost_decreases_during_training() -> None:
     assert result.cost_history[-1] < result.cost_history[0]
 
 
+def test_vqc_device_is_selected_through_pennylane_abstraction() -> None:
+    circuit = make_vqc(n_qubits=2, n_layers=1, device_name="default.qubit")
+    value = float(circuit(numpy.array([0.2, 0.4]), numpy.zeros(4)))
+    assert -1.0 <= value <= 1.0
+
+
 def test_weight_indices_dont_collide() -> None:
     """Every RY/RZ trainable rotation must consume its own raw weight."""
     indices = weight_indices_used(DEFAULT_N_QUBITS, DEFAULT_N_LAYERS)

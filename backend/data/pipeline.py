@@ -4,7 +4,7 @@ The returned data keeps three explicit feature views:
 
 * all 30 imputed and standardized features for realistic baselines;
 * the same four named selected features for fair classical comparisons;
-* those four features additionally scaled just inside ``[0, pi]`` for quantum
+* those four features additionally scaled just inside ``(0, pi)`` for quantum
   models, avoiding exact rotation/amplitude boundaries during live inference.
 
 Classical and quantum labels are separate arrays throughout.  The original
@@ -114,9 +114,7 @@ def prepare_breast_cancer_data(
     """
 
     dataset = load_breast_cancer()
-    X = np.asarray(dataset.data, dtype=float)
-    y = np.asarray(dataset.target, dtype=np.int64).copy()
-    y_pm1 = (y * 2 - 1).astype(float)
+    y = np.asarray(dataset.target, dtype=np.int64)
     indices = np.arange(y.size, dtype=np.int64)
 
     train_indices, test_indices = train_test_split(
@@ -125,6 +123,50 @@ def prepare_breast_cancer_data(
         random_state=random_state,
         stratify=y,
     )
+    return prepare_breast_cancer_partition(train_indices, test_indices)
+
+
+def prepare_breast_cancer_partition(
+    train_indices: ArrayLike,
+    test_indices: ArrayLike,
+) -> PreparedBreastCancerData:
+    """Fit the complete pipeline on an explicit train/validation partition.
+
+    This is the fold-safe entry point used by cross-validation.  Every fitted
+    preprocessing component sees only ``train_indices``; validation rows are
+    transformed afterward with no refitting.
+    """
+
+    dataset = load_breast_cancer()
+    X = np.asarray(dataset.data, dtype=float)
+    y = np.asarray(dataset.target, dtype=np.int64).copy()
+    y_pm1 = (y * 2 - 1).astype(float)
+    train_indices = np.asarray(train_indices, dtype=np.int64)
+    test_indices = np.asarray(test_indices, dtype=np.int64)
+    if train_indices.ndim != 1 or test_indices.ndim != 1:
+        raise ValueError("partition indices must be one-dimensional")
+    if train_indices.size == 0 or test_indices.size == 0:
+        raise ValueError("both partition index arrays must be non-empty")
+    if (
+        len(np.unique(train_indices)) != train_indices.size
+        or len(np.unique(test_indices)) != test_indices.size
+    ):
+        raise ValueError("partition indices cannot contain duplicates")
+    if np.intersect1d(train_indices, test_indices).size:
+        raise ValueError("training and validation indices cannot overlap")
+    if (
+        np.any(train_indices < 0)
+        or np.any(test_indices < 0)
+        or np.any(train_indices >= y.size)
+        or np.any(test_indices >= y.size)
+    ):
+        raise ValueError("partition indices are outside the dataset")
+    if (
+        set(np.unique(y[train_indices])) != {0, 1}
+        or set(np.unique(y[test_indices])) != {0, 1}
+    ):
+        raise ValueError("both partitions must contain malignant and benign rows")
+
     X_train_raw = X[train_indices]
     X_test_raw = X[test_indices]
     y_train = y[train_indices].copy()

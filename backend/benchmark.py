@@ -8,8 +8,8 @@ Run from the repository root with::
 
     python -m backend.benchmark
 
-Metrics use class 1 (benign) as positive, matching sklearn's original WBCD
-encoding.  Every seed gets its own stratified split and train-fitted
+Clinical metrics use class 0 (malignant) as positive while preserving sklearn's
+original WBCD encoding. Every seed gets its own stratified split and train-fitted
 preprocessing pipeline; no test rows participate in fitting or training.
 """
 

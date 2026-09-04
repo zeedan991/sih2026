@@ -4,7 +4,14 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 from backend.classical.baselines import (
     FEATURE_CONFIGURATIONS,
@@ -58,31 +65,46 @@ def test_configurations_use_30_and_exact_same_4_selected_features(
         assert result.estimator.n_features_in_ == 4
 
 
-def test_metrics_match_sklearn_with_benign_as_positive(
+def test_metrics_use_malignant_as_the_clinical_positive_class(
     prepared_data, baseline_results
 ) -> None:
-    assert POSITIVE_LABEL == 1
-    assert POSITIVE_CLASS_NAME == "benign"
+    assert POSITIVE_LABEL == 0
+    assert POSITIVE_CLASS_NAME == "malignant"
     assert prepared_data.target_names[POSITIVE_LABEL] == POSITIVE_CLASS_NAME
 
     for configuration in FEATURE_CONFIGURATIONS:
         for result in baseline_results[configuration].values():
             predictions = result.predictions
             metrics = result.metrics
-            assert metrics.positive_label == 1
-            assert metrics.positive_class_name == "benign"
+            assert metrics.positive_label == 0
+            assert metrics.positive_class_name == "malignant"
             assert metrics.accuracy == pytest.approx(
                 accuracy_score(prepared_data.y_test, predictions)
             )
             assert metrics.precision == pytest.approx(
-                precision_score(prepared_data.y_test, predictions, pos_label=1)
+                precision_score(prepared_data.y_test, predictions, pos_label=0)
             )
             assert metrics.recall == pytest.approx(
-                recall_score(prepared_data.y_test, predictions, pos_label=1)
+                recall_score(prepared_data.y_test, predictions, pos_label=0)
             )
             assert metrics.f1 == pytest.approx(
-                f1_score(prepared_data.y_test, predictions, pos_label=1)
+                f1_score(prepared_data.y_test, predictions, pos_label=0)
             )
+            assert metrics.malignant_sensitivity == pytest.approx(metrics.recall)
+            assert metrics.specificity == pytest.approx(
+                recall_score(prepared_data.y_test, predictions, pos_label=1)
+            )
+            expected = confusion_matrix(
+                prepared_data.y_test, predictions, labels=[0, 1]
+            )
+            assert metrics.confusion_matrix == {
+                "true_positive": int(expected[0, 0]),
+                "false_negative": int(expected[0, 1]),
+                "false_positive": int(expected[1, 0]),
+                "true_negative": int(expected[1, 1]),
+            }
+            assert metrics.roc_auc is not None
+            assert 0.0 <= metrics.roc_auc <= 1.0
 
 
 def test_training_preserves_original_classical_labels(

@@ -83,6 +83,7 @@ class MemberEvaluation:
     accuracy: float
     positive_probabilities: FloatArray
     predictions: IntArray
+    elapsed_seconds: float
     artifact: VQCTrainingResult | QuantumKernelSVM
     vqc_config: VQCVariantConfig | None = None
 
@@ -155,6 +156,7 @@ class _PendingMember:
     positive_probabilities: FloatArray
     predictions: IntArray
     accuracy: float
+    elapsed_seconds: float
     artifact: VQCTrainingResult | QuantumKernelSVM
     vqc_config: VQCVariantConfig | None = None
 
@@ -219,6 +221,7 @@ def train_quantum_ensemble(
     learning_rate: float = DEFAULT_LEARNING_RATE,
     training_sample_limit: int | None = None,
     show_progress: bool = True,
+    device_name: str = "lightning.qubit",
 ) -> SeedEnsembleResult:
     """Fit four VQCs and two QSVMs, then derive OOB weights and test metrics."""
 
@@ -256,6 +259,7 @@ def train_quantum_ensemble(
             input_order=config.input_order,
             n_epochs=vqc_epochs,
             learning_rate=learning_rate,
+            device_name=device_name,
         )
         oob_probabilities = predict_vqc_probabilities(
             fitted.circuit,
@@ -287,6 +291,7 @@ def train_quantum_ensemble(
                 positive_probabilities=test_probabilities,
                 predictions=test_predictions,
                 accuracy=_accuracy(data.y_test, test_predictions),
+                elapsed_seconds=time.perf_counter() - member_started,
                 artifact=fitted,
                 vqc_config=config,
             )
@@ -311,6 +316,7 @@ def train_quantum_ensemble(
         fitted = QuantumKernelSVM(
             embedding=embedding,
             random_state=_member_seed(seed, member_index, stream=2),
+            device_name=device_name,
         ).fit(pool_features[split.bootstrap_indices], pool_y[split.bootstrap_indices])
         oob_probabilities = fitted.predict_benign_proba(
             pool_features[split.oob_indices]
@@ -333,6 +339,7 @@ def train_quantum_ensemble(
                 positive_probabilities=test_probabilities,
                 predictions=test_predictions,
                 accuracy=_accuracy(data.y_test, test_predictions),
+                elapsed_seconds=time.perf_counter() - member_started,
                 artifact=fitted,
             )
         )
@@ -360,6 +367,7 @@ def train_quantum_ensemble(
             accuracy=member.accuracy,
             positive_probabilities=member.positive_probabilities,
             predictions=member.predictions,
+            elapsed_seconds=member.elapsed_seconds,
             artifact=member.artifact,
             vqc_config=member.vqc_config,
         )
@@ -399,6 +407,7 @@ def run_phase2_benchmark(
     learning_rate: float = DEFAULT_LEARNING_RATE,
     training_sample_limit: int | None = None,
     show_progress: bool = True,
+    device_name: str = "lightning.qubit",
 ) -> Phase2BenchmarkReport:
     """Run the full held-out ensemble comparison across at least three seeds."""
 
@@ -422,6 +431,7 @@ def run_phase2_benchmark(
             learning_rate=learning_rate,
             training_sample_limit=training_sample_limit,
             show_progress=show_progress,
+            device_name=device_name,
         )
         results.append(result)
         if show_progress:

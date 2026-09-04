@@ -1,0 +1,1116 @@
+{
+  "seeds": [
+    42,
+    123,
+    2026
+  ],
+  "rows": [
+    {
+      "fold_or_seed": 42,
+      "paradigm": "classical",
+      "feature_configuration": "full_feature",
+      "model_name": "logistic_regression",
+      "metrics": {
+        "accuracy": 0.9824561403508771,
+        "precision": 0.9761904761904762,
+        "recall": 0.9761904761904762,
+        "f1": 0.9761904761904762,
+        "malignant_sensitivity": 0.9761904761904762,
+        "specificity": 0.9861111111111112,
+        "confusion_matrix": {
+          "true_positive": 41,
+          "false_negative": 1,
+          "false_positive": 1,
+          "true_negative": 71
+        },
+        "roc_auc": 0.9953703703703705,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.005782899999758229,
+      "predict_seconds": 0.000842499999635038,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 42,
+      "paradigm": "classical",
+      "feature_configuration": "full_feature",
+      "model_name": "random_forest",
+      "metrics": {
+        "accuracy": 0.956140350877193,
+        "precision": 0.9512195121951219,
+        "recall": 0.9285714285714286,
+        "f1": 0.9397590361445783,
+        "malignant_sensitivity": 0.9285714285714286,
+        "specificity": 0.9722222222222222,
+        "confusion_matrix": {
+          "true_positive": 39,
+          "false_negative": 3,
+          "false_positive": 2,
+          "true_negative": 70
+        },
+        "roc_auc": 0.9932208994708995,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.44824510000034934,
+      "predict_seconds": 0.05051100000127917,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 42,
+      "paradigm": "classical",
+      "feature_configuration": "full_feature",
+      "model_name": "xgboost",
+      "metrics": {
+        "accuracy": 0.956140350877193,
+        "precision": 0.9743589743589743,
+        "recall": 0.9047619047619048,
+        "f1": 0.9382716049382716,
+        "malignant_sensitivity": 0.9047619047619048,
+        "specificity": 0.9861111111111112,
+        "confusion_matrix": {
+          "true_positive": 38,
+          "false_negative": 4,
+          "false_positive": 1,
+          "true_negative": 71
+        },
+        "roc_auc": 0.9943783068783069,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.2578928000002634,
+      "predict_seconds": 0.0029448999994201586,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 42,
+      "paradigm": "classical",
+      "feature_configuration": "full_feature",
+      "model_name": "svm",
+      "metrics": {
+        "accuracy": 0.9824561403508771,
+        "precision": 0.9761904761904762,
+        "recall": 0.9761904761904762,
+        "f1": 0.9761904761904762,
+        "malignant_sensitivity": 0.9761904761904762,
+        "specificity": 0.9861111111111112,
+        "confusion_matrix": {
+          "true_positive": 41,
+          "false_negative": 1,
+          "false_positive": 1,
+          "true_negative": 71
+        },
+        "roc_auc": 0.9950396825396826,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.002735099998972146,
+      "predict_seconds": 0.001987600000575185,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 42,
+      "paradigm": "classical",
+      "feature_configuration": "same_4_feature",
+      "model_name": "logistic_regression",
+      "metrics": {
+        "accuracy": 0.9298245614035088,
+        "precision": 0.8695652173913043,
+        "recall": 0.9523809523809523,
+        "f1": 0.9090909090909091,
+        "malignant_sensitivity": 0.9523809523809523,
+        "specificity": 0.9166666666666666,
+        "confusion_matrix": {
+          "true_positive": 40,
+          "false_negative": 2,
+          "false_positive": 6,
+          "true_negative": 66
+        },
+        "roc_auc": 0.9907407407407407,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.003850600000077975,
+      "predict_seconds": 0.0005959000009170268,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 42,
+      "paradigm": "classical",
+      "feature_configuration": "same_4_feature",
+      "model_name": "random_forest",
+      "metrics": {
+        "accuracy": 0.9210526315789473,
+        "precision": 0.8837209302325582,
+        "recall": 0.9047619047619048,
+        "f1": 0.8941176470588236,
+        "malignant_sensitivity": 0.9047619047619048,
+        "specificity": 0.9305555555555556,
+        "confusion_matrix": {
+          "true_positive": 38,
+          "false_negative": 4,
+          "false_positive": 5,
+          "true_negative": 67
+        },
+        "roc_auc": 0.9847883597883598,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.3214748000009422,
+      "predict_seconds": 0.024269199999253033,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 42,
+      "paradigm": "classical",
+      "feature_configuration": "same_4_feature",
+      "model_name": "xgboost",
+      "metrics": {
+        "accuracy": 0.9298245614035088,
+        "precision": 0.8863636363636364,
+        "recall": 0.9285714285714286,
+        "f1": 0.9069767441860465,
+        "malignant_sensitivity": 0.9285714285714286,
+        "specificity": 0.9305555555555556,
+        "confusion_matrix": {
+          "true_positive": 39,
+          "false_negative": 3,
+          "false_positive": 5,
+          "true_negative": 67
+        },
+        "roc_auc": 0.9834656084656085,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.05380869999862625,
+      "predict_seconds": 0.002381799999056966,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 42,
+      "paradigm": "classical",
+      "feature_configuration": "same_4_feature",
+      "model_name": "svm",
+      "metrics": {
+        "accuracy": 0.9298245614035088,
+        "precision": 0.8695652173913043,
+        "recall": 0.9523809523809523,
+        "f1": 0.9090909090909091,
+        "malignant_sensitivity": 0.9523809523809523,
+        "specificity": 0.9166666666666666,
+        "confusion_matrix": {
+          "true_positive": 40,
+          "false_negative": 2,
+          "false_positive": 6,
+          "true_negative": 66
+        },
+        "roc_auc": 0.9890873015873016,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.002255699999295757,
+      "predict_seconds": 0.0013189999990572687,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 123,
+      "paradigm": "classical",
+      "feature_configuration": "full_feature",
+      "model_name": "logistic_regression",
+      "metrics": {
+        "accuracy": 0.9736842105263158,
+        "precision": 0.975609756097561,
+        "recall": 0.9523809523809523,
+        "f1": 0.963855421686747,
+        "malignant_sensitivity": 0.9523809523809523,
+        "specificity": 0.9861111111111112,
+        "confusion_matrix": {
+          "true_positive": 40,
+          "false_negative": 2,
+          "false_positive": 1,
+          "true_negative": 71
+        },
+        "roc_auc": 0.9940476190476191,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.0026206000002275687,
+      "predict_seconds": 0.0003001000004587695,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 123,
+      "paradigm": "classical",
+      "feature_configuration": "full_feature",
+      "model_name": "random_forest",
+      "metrics": {
+        "accuracy": 0.9649122807017544,
+        "precision": 0.9523809523809523,
+        "recall": 0.9523809523809523,
+        "f1": 0.9523809523809523,
+        "malignant_sensitivity": 0.9523809523809523,
+        "specificity": 0.9722222222222222,
+        "confusion_matrix": {
+          "true_positive": 40,
+          "false_negative": 2,
+          "false_positive": 2,
+          "true_negative": 70
+        },
+        "roc_auc": 0.9983465608465608,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.3644371999998839,
+      "predict_seconds": 0.034220199999253964,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 123,
+      "paradigm": "classical",
+      "feature_configuration": "full_feature",
+      "model_name": "xgboost",
+      "metrics": {
+        "accuracy": 0.9824561403508771,
+        "precision": 0.9545454545454546,
+        "recall": 1.0,
+        "f1": 0.9767441860465116,
+        "malignant_sensitivity": 1.0,
+        "specificity": 0.9722222222222222,
+        "confusion_matrix": {
+          "true_positive": 42,
+          "false_negative": 0,
+          "false_positive": 2,
+          "true_negative": 70
+        },
+        "roc_auc": 1.0,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.15882450000026438,
+      "predict_seconds": 0.002453199998853961,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 123,
+      "paradigm": "classical",
+      "feature_configuration": "full_feature",
+      "model_name": "svm",
+      "metrics": {
+        "accuracy": 0.9912280701754386,
+        "precision": 1.0,
+        "recall": 0.9761904761904762,
+        "f1": 0.9879518072289156,
+        "malignant_sensitivity": 0.9761904761904762,
+        "specificity": 1.0,
+        "confusion_matrix": {
+          "true_positive": 41,
+          "false_negative": 1,
+          "false_positive": 0,
+          "true_negative": 72
+        },
+        "roc_auc": 0.9993386243386243,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.0037728999996033963,
+      "predict_seconds": 0.003196699999534758,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 123,
+      "paradigm": "classical",
+      "feature_configuration": "same_4_feature",
+      "model_name": "logistic_regression",
+      "metrics": {
+        "accuracy": 0.9385964912280702,
+        "precision": 0.9069767441860465,
+        "recall": 0.9285714285714286,
+        "f1": 0.9176470588235294,
+        "malignant_sensitivity": 0.9285714285714286,
+        "specificity": 0.9444444444444444,
+        "confusion_matrix": {
+          "true_positive": 39,
+          "false_negative": 3,
+          "false_positive": 4,
+          "true_negative": 68
+        },
+        "roc_auc": 0.9943783068783069,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.002885699999751523,
+      "predict_seconds": 0.0007470999989891425,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 123,
+      "paradigm": "classical",
+      "feature_configuration": "same_4_feature",
+      "model_name": "random_forest",
+      "metrics": {
+        "accuracy": 0.9385964912280702,
+        "precision": 0.9069767441860465,
+        "recall": 0.9285714285714286,
+        "f1": 0.9176470588235294,
+        "malignant_sensitivity": 0.9285714285714286,
+        "specificity": 0.9444444444444444,
+        "confusion_matrix": {
+          "true_positive": 39,
+          "false_negative": 3,
+          "false_positive": 4,
+          "true_negative": 68
+        },
+        "roc_auc": 0.9877645502645502,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.3300820999993448,
+      "predict_seconds": 0.04342779999933555,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 123,
+      "paradigm": "classical",
+      "feature_configuration": "same_4_feature",
+      "model_name": "xgboost",
+      "metrics": {
+        "accuracy": 0.9385964912280702,
+        "precision": 0.9069767441860465,
+        "recall": 0.9285714285714286,
+        "f1": 0.9176470588235294,
+        "malignant_sensitivity": 0.9285714285714286,
+        "specificity": 0.9444444444444444,
+        "confusion_matrix": {
+          "true_positive": 39,
+          "false_negative": 3,
+          "false_positive": 4,
+          "true_negative": 68
+        },
+        "roc_auc": 0.9927248677248677,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.028514200001154677,
+      "predict_seconds": 0.0016561000011279248,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 123,
+      "paradigm": "classical",
+      "feature_configuration": "same_4_feature",
+      "model_name": "svm",
+      "metrics": {
+        "accuracy": 0.9473684210526315,
+        "precision": 0.9285714285714286,
+        "recall": 0.9285714285714286,
+        "f1": 0.9285714285714286,
+        "malignant_sensitivity": 0.9285714285714286,
+        "specificity": 0.9583333333333334,
+        "confusion_matrix": {
+          "true_positive": 39,
+          "false_negative": 3,
+          "false_positive": 3,
+          "true_negative": 69
+        },
+        "roc_auc": 0.9937169312169312,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.0014701999989483738,
+      "predict_seconds": 0.0011268999987805728,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 2026,
+      "paradigm": "classical",
+      "feature_configuration": "full_feature",
+      "model_name": "logistic_regression",
+      "metrics": {
+        "accuracy": 0.9736842105263158,
+        "precision": 0.975609756097561,
+        "recall": 0.9523809523809523,
+        "f1": 0.963855421686747,
+        "malignant_sensitivity": 0.9523809523809523,
+        "specificity": 0.9861111111111112,
+        "confusion_matrix": {
+          "true_positive": 40,
+          "false_negative": 2,
+          "false_positive": 1,
+          "true_negative": 71
+        },
+        "roc_auc": 0.9927248677248677,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.00323009999920032,
+      "predict_seconds": 0.0002690999990591081,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 2026,
+      "paradigm": "classical",
+      "feature_configuration": "full_feature",
+      "model_name": "random_forest",
+      "metrics": {
+        "accuracy": 0.956140350877193,
+        "precision": 0.9111111111111111,
+        "recall": 0.9761904761904762,
+        "f1": 0.9425287356321839,
+        "malignant_sensitivity": 0.9761904761904762,
+        "specificity": 0.9444444444444444,
+        "confusion_matrix": {
+          "true_positive": 41,
+          "false_negative": 1,
+          "false_positive": 4,
+          "true_negative": 68
+        },
+        "roc_auc": 0.9907407407407407,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.3616292999995494,
+      "predict_seconds": 0.04383190000044124,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 2026,
+      "paradigm": "classical",
+      "feature_configuration": "full_feature",
+      "model_name": "xgboost",
+      "metrics": {
+        "accuracy": 0.9736842105263158,
+        "precision": 0.9534883720930233,
+        "recall": 0.9761904761904762,
+        "f1": 0.9647058823529412,
+        "malignant_sensitivity": 0.9761904761904762,
+        "specificity": 0.9722222222222222,
+        "confusion_matrix": {
+          "true_positive": 41,
+          "false_negative": 1,
+          "false_positive": 2,
+          "true_negative": 70
+        },
+        "roc_auc": 0.9947089947089947,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.12419510000108858,
+      "predict_seconds": 0.0027019999997719424,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 2026,
+      "paradigm": "classical",
+      "feature_configuration": "full_feature",
+      "model_name": "svm",
+      "metrics": {
+        "accuracy": 0.9649122807017544,
+        "precision": 0.9318181818181818,
+        "recall": 0.9761904761904762,
+        "f1": 0.9534883720930233,
+        "malignant_sensitivity": 0.9761904761904762,
+        "specificity": 0.9583333333333334,
+        "confusion_matrix": {
+          "true_positive": 41,
+          "false_negative": 1,
+          "false_positive": 3,
+          "true_negative": 69
+        },
+        "roc_auc": 0.9953703703703703,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.004076000001077773,
+      "predict_seconds": 0.002409699998679571,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 2026,
+      "paradigm": "classical",
+      "feature_configuration": "same_4_feature",
+      "model_name": "logistic_regression",
+      "metrics": {
+        "accuracy": 0.9385964912280702,
+        "precision": 0.8723404255319149,
+        "recall": 0.9761904761904762,
+        "f1": 0.9213483146067416,
+        "malignant_sensitivity": 0.9761904761904762,
+        "specificity": 0.9166666666666666,
+        "confusion_matrix": {
+          "true_positive": 41,
+          "false_negative": 1,
+          "false_positive": 6,
+          "true_negative": 66
+        },
+        "roc_auc": 0.9894179894179894,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.005653299998812145,
+      "predict_seconds": 0.0008319999997183913,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 2026,
+      "paradigm": "classical",
+      "feature_configuration": "same_4_feature",
+      "model_name": "random_forest",
+      "metrics": {
+        "accuracy": 0.9385964912280702,
+        "precision": 0.8888888888888888,
+        "recall": 0.9523809523809523,
+        "f1": 0.9195402298850575,
+        "malignant_sensitivity": 0.9523809523809523,
+        "specificity": 0.9305555555555556,
+        "confusion_matrix": {
+          "true_positive": 40,
+          "false_negative": 2,
+          "false_positive": 5,
+          "true_negative": 67
+        },
+        "roc_auc": 0.9831349206349206,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.37947970000095665,
+      "predict_seconds": 0.03214830000069924,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 2026,
+      "paradigm": "classical",
+      "feature_configuration": "same_4_feature",
+      "model_name": "xgboost",
+      "metrics": {
+        "accuracy": 0.9298245614035088,
+        "precision": 0.8695652173913043,
+        "recall": 0.9523809523809523,
+        "f1": 0.9090909090909091,
+        "malignant_sensitivity": 0.9523809523809523,
+        "specificity": 0.9166666666666666,
+        "confusion_matrix": {
+          "true_positive": 40,
+          "false_negative": 2,
+          "false_positive": 6,
+          "true_negative": 66
+        },
+        "roc_auc": 0.9794973544973545,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.036721700000271085,
+      "predict_seconds": 0.002180600000428967,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    },
+    {
+      "fold_or_seed": 2026,
+      "paradigm": "classical",
+      "feature_configuration": "same_4_feature",
+      "model_name": "svm",
+      "metrics": {
+        "accuracy": 0.9385964912280702,
+        "precision": 0.8888888888888888,
+        "recall": 0.9523809523809523,
+        "f1": 0.9195402298850575,
+        "malignant_sensitivity": 0.9523809523809523,
+        "specificity": 0.9305555555555556,
+        "confusion_matrix": {
+          "true_positive": 40,
+          "false_negative": 2,
+          "false_positive": 5,
+          "true_negative": 67
+        },
+        "roc_auc": 0.9877645502645502,
+        "positive_label": 0,
+        "positive_class_name": "malignant"
+      },
+      "fit_seconds": 0.003042799999093404,
+      "predict_seconds": 0.002594199999293778,
+      "timing_scope": "individual_model_fit_and_heldout_prediction"
+    }
+  ],
+  "summaries": {
+    "classical/full_feature/logistic_regression": {
+      "runs": 3,
+      "metrics": {
+        "accuracy": {
+          "mean": 0.9766081871345029,
+          "range": [
+            0.9736842105263158,
+            0.9824561403508771
+          ]
+        },
+        "precision": {
+          "mean": 0.975803329461866,
+          "range": [
+            0.975609756097561,
+            0.9761904761904762
+          ]
+        },
+        "recall": {
+          "mean": 0.9603174603174602,
+          "range": [
+            0.9523809523809523,
+            0.9761904761904762
+          ]
+        },
+        "f1": {
+          "mean": 0.9679671065213233,
+          "range": [
+            0.963855421686747,
+            0.9761904761904762
+          ]
+        },
+        "malignant_sensitivity": {
+          "mean": 0.9603174603174602,
+          "range": [
+            0.9523809523809523,
+            0.9761904761904762
+          ]
+        },
+        "specificity": {
+          "mean": 0.9861111111111112,
+          "range": [
+            0.9861111111111112,
+            0.9861111111111112
+          ]
+        },
+        "roc_auc": {
+          "mean": 0.9940476190476191,
+          "range": [
+            0.9927248677248677,
+            0.9953703703703705
+          ]
+        }
+      },
+      "mean_fit_seconds": 0.0038778666663953723,
+      "mean_predict_seconds": 0.00047056666638430517,
+      "timing_scope": [
+        "individual_model_fit_and_heldout_prediction"
+      ],
+      "total_false_negatives": 5
+    },
+    "classical/full_feature/random_forest": {
+      "runs": 3,
+      "metrics": {
+        "accuracy": {
+          "mean": 0.9590643274853801,
+          "range": [
+            0.956140350877193,
+            0.9649122807017544
+          ]
+        },
+        "precision": {
+          "mean": 0.9382371918957284,
+          "range": [
+            0.9111111111111111,
+            0.9523809523809523
+          ]
+        },
+        "recall": {
+          "mean": 0.9523809523809523,
+          "range": [
+            0.9285714285714286,
+            0.9761904761904762
+          ]
+        },
+        "f1": {
+          "mean": 0.9448895747192382,
+          "range": [
+            0.9397590361445783,
+            0.9523809523809523
+          ]
+        },
+        "malignant_sensitivity": {
+          "mean": 0.9523809523809523,
+          "range": [
+            0.9285714285714286,
+            0.9761904761904762
+          ]
+        },
+        "specificity": {
+          "mean": 0.9629629629629629,
+          "range": [
+            0.9444444444444444,
+            0.9722222222222222
+          ]
+        },
+        "roc_auc": {
+          "mean": 0.994102733686067,
+          "range": [
+            0.9907407407407407,
+            0.9983465608465608
+          ]
+        }
+      },
+      "mean_fit_seconds": 0.39143719999992754,
+      "mean_predict_seconds": 0.04285436666699146,
+      "timing_scope": [
+        "individual_model_fit_and_heldout_prediction"
+      ],
+      "total_false_negatives": 6
+    },
+    "classical/full_feature/xgboost": {
+      "runs": 3,
+      "metrics": {
+        "accuracy": {
+          "mean": 0.9707602339181286,
+          "range": [
+            0.956140350877193,
+            0.9824561403508771
+          ]
+        },
+        "precision": {
+          "mean": 0.9607976003324841,
+          "range": [
+            0.9534883720930233,
+            0.9743589743589743
+          ]
+        },
+        "recall": {
+          "mean": 0.9603174603174603,
+          "range": [
+            0.9047619047619048,
+            1.0
+          ]
+        },
+        "f1": {
+          "mean": 0.9599072244459081,
+          "range": [
+            0.9382716049382716,
+            0.9767441860465116
+          ]
+        },
+        "malignant_sensitivity": {
+          "mean": 0.9603174603174603,
+          "range": [
+            0.9047619047619048,
+            1.0
+          ]
+        },
+        "specificity": {
+          "mean": 0.9768518518518519,
+          "range": [
+            0.9722222222222222,
+            0.9861111111111112
+          ]
+        },
+        "roc_auc": {
+          "mean": 0.9963624338624338,
+          "range": [
+            0.9943783068783069,
+            1.0
+          ]
+        }
+      },
+      "mean_fit_seconds": 0.1803041333338721,
+      "mean_predict_seconds": 0.0027000333326820205,
+      "timing_scope": [
+        "individual_model_fit_and_heldout_prediction"
+      ],
+      "total_false_negatives": 5
+    },
+    "classical/full_feature/svm": {
+      "runs": 3,
+      "metrics": {
+        "accuracy": {
+          "mean": 0.97953216374269,
+          "range": [
+            0.9649122807017544,
+            0.9912280701754386
+          ]
+        },
+        "precision": {
+          "mean": 0.9693362193362193,
+          "range": [
+            0.9318181818181818,
+            1.0
+          ]
+        },
+        "recall": {
+          "mean": 0.9761904761904762,
+          "range": [
+            0.9761904761904762,
+            0.9761904761904762
+          ]
+        },
+        "f1": {
+          "mean": 0.9725435518374717,
+          "range": [
+            0.9534883720930233,
+            0.9879518072289156
+          ]
+        },
+        "malignant_sensitivity": {
+          "mean": 0.9761904761904762,
+          "range": [
+            0.9761904761904762,
+            0.9761904761904762
+          ]
+        },
+        "specificity": {
+          "mean": 0.9814814814814815,
+          "range": [
+            0.9583333333333334,
+            1.0
+          ]
+        },
+        "roc_auc": {
+          "mean": 0.9965828924162258,
+          "range": [
+            0.9950396825396826,
+            0.9993386243386243
+          ]
+        }
+      },
+      "mean_fit_seconds": 0.0035279999998844382,
+      "mean_predict_seconds": 0.002531333332929838,
+      "timing_scope": [
+        "individual_model_fit_and_heldout_prediction"
+      ],
+      "total_false_negatives": 3
+    },
+    "classical/same_4_feature/logistic_regression": {
+      "runs": 3,
+      "metrics": {
+        "accuracy": {
+          "mean": 0.9356725146198831,
+          "range": [
+            0.9298245614035088,
+            0.9385964912280702
+          ]
+        },
+        "precision": {
+          "mean": 0.8829607957030886,
+          "range": [
+            0.8695652173913043,
+            0.9069767441860465
+          ]
+        },
+        "recall": {
+          "mean": 0.9523809523809523,
+          "range": [
+            0.9285714285714286,
+            0.9761904761904762
+          ]
+        },
+        "f1": {
+          "mean": 0.9160287608403933,
+          "range": [
+            0.9090909090909091,
+            0.9213483146067416
+          ]
+        },
+        "malignant_sensitivity": {
+          "mean": 0.9523809523809523,
+          "range": [
+            0.9285714285714286,
+            0.9761904761904762
+          ]
+        },
+        "specificity": {
+          "mean": 0.9259259259259259,
+          "range": [
+            0.9166666666666666,
+            0.9444444444444444
+          ]
+        },
+        "roc_auc": {
+          "mean": 0.9915123456790124,
+          "range": [
+            0.9894179894179894,
+            0.9943783068783069
+          ]
+        }
+      },
+      "mean_fit_seconds": 0.004129866666213881,
+      "mean_predict_seconds": 0.0007249999998748535,
+      "timing_scope": [
+        "individual_model_fit_and_heldout_prediction"
+      ],
+      "total_false_negatives": 6
+    },
+    "classical/same_4_feature/random_forest": {
+      "runs": 3,
+      "metrics": {
+        "accuracy": {
+          "mean": 0.9327485380116959,
+          "range": [
+            0.9210526315789473,
+            0.9385964912280702
+          ]
+        },
+        "precision": {
+          "mean": 0.8931955211024978,
+          "range": [
+            0.8837209302325582,
+            0.9069767441860465
+          ]
+        },
+        "recall": {
+          "mean": 0.9285714285714286,
+          "range": [
+            0.9047619047619048,
+            0.9523809523809523
+          ]
+        },
+        "f1": {
+          "mean": 0.9104349785891368,
+          "range": [
+            0.8941176470588236,
+            0.9195402298850575
+          ]
+        },
+        "malignant_sensitivity": {
+          "mean": 0.9285714285714286,
+          "range": [
+            0.9047619047619048,
+            0.9523809523809523
+          ]
+        },
+        "specificity": {
+          "mean": 0.9351851851851852,
+          "range": [
+            0.9305555555555556,
+            0.9444444444444444
+          ]
+        },
+        "roc_auc": {
+          "mean": 0.9852292768959435,
+          "range": [
+            0.9831349206349206,
+            0.9877645502645502
+          ]
+        }
+      },
+      "mean_fit_seconds": 0.3436788666670812,
+      "mean_predict_seconds": 0.03328176666642927,
+      "timing_scope": [
+        "individual_model_fit_and_heldout_prediction"
+      ],
+      "total_false_negatives": 9
+    },
+    "classical/same_4_feature/xgboost": {
+      "runs": 3,
+      "metrics": {
+        "accuracy": {
+          "mean": 0.9327485380116959,
+          "range": [
+            0.9298245614035088,
+            0.9385964912280702
+          ]
+        },
+        "precision": {
+          "mean": 0.8876351993136624,
+          "range": [
+            0.8695652173913043,
+            0.9069767441860465
+          ]
+        },
+        "recall": {
+          "mean": 0.9365079365079365,
+          "range": [
+            0.9285714285714286,
+            0.9523809523809523
+          ]
+        },
+        "f1": {
+          "mean": 0.9112382373668283,
+          "range": [
+            0.9069767441860465,
+            0.9176470588235294
+          ]
+        },
+        "malignant_sensitivity": {
+          "mean": 0.9365079365079365,
+          "range": [
+            0.9285714285714286,
+            0.9523809523809523
+          ]
+        },
+        "specificity": {
+          "mean": 0.9305555555555556,
+          "range": [
+            0.9166666666666666,
+            0.9444444444444444
+          ]
+        },
+        "roc_auc": {
+          "mean": 0.9852292768959435,
+          "range": [
+            0.9794973544973545,
+            0.9927248677248677
+          ]
+        }
+      },
+      "mean_fit_seconds": 0.03968153333335067,
+      "mean_predict_seconds": 0.0020728333335379525,
+      "timing_scope": [
+        "individual_model_fit_and_heldout_prediction"
+      ],
+      "total_false_negatives": 8
+    },
+    "classical/same_4_feature/svm": {
+      "runs": 3,
+      "metrics": {
+        "accuracy": {
+          "mean": 0.9385964912280702,
+          "range": [
+            0.9298245614035088,
+            0.9473684210526315
+          ]
+        },
+        "precision": {
+          "mean": 0.8956751782838739,
+          "range": [
+            0.8695652173913043,
+            0.9285714285714286
+          ]
+        },
+        "recall": {
+          "mean": 0.9444444444444444,
+          "range": [
+            0.9285714285714286,
+            0.9523809523809523
+          ]
+        },
+        "f1": {
+          "mean": 0.9190675225157984,
+          "range": [
+            0.9090909090909091,
+            0.9285714285714286
+          ]
+        },
+        "malignant_sensitivity": {
+          "mean": 0.9444444444444444,
+          "range": [
+            0.9285714285714286,
+            0.9523809523809523
+          ]
+        },
+        "specificity": {
+          "mean": 0.9351851851851852,
+          "range": [
+            0.9166666666666666,
+            0.9583333333333334
+          ]
+        },
+        "roc_auc": {
+          "mean": 0.990189594356261,
+          "range": [
+            0.9877645502645502,
+            0.9937169312169312
+          ]
+        }
+      },
+      "mean_fit_seconds": 0.002256233332445845,
+      "mean_predict_seconds": 0.0016800333323772065,
+      "timing_scope": [
+        "individual_model_fit_and_heldout_prediction"
+      ],
+      "total_false_negatives": 7
+    }
+  },
+  "elapsed_seconds": 3.638966000000437
+}
