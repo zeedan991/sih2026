@@ -115,9 +115,24 @@ with st.sidebar:
             st.rerun()
         st.stop()
 
+    try:
+        disease_catalog = api_json("/diseases")
+    except RuntimeError as error:
+        st.error(str(error))
+        st.stop()
+    module_by_id = {
+        module["disease_id"]: module for module in disease_catalog["modules"]
+    }
+    disease_id = st.selectbox(
+        "Disease module",
+        tuple(module_by_id),
+        format_func=lambda identifier: module_by_id[identifier]["short_title"],
+    )
+    active_module = module_by_id[disease_id]
+
     st.divider()
     st.caption("Selected clinical features")
-    for feature_name in health["selected_features"]:
+    for feature_name in active_module["selected_feature_names"]:
         st.markdown(f"- `{feature_name}`")
 
 prediction_tab, benchmark_tab, raw_tab = st.tabs(
@@ -126,7 +141,7 @@ prediction_tab, benchmark_tab, raw_tab = st.tabs(
 
 with prediction_tab:
     try:
-        catalog = api_json("/patients?limit=12")
+        catalog = api_json(f"/patients?limit=12&disease_id={disease_id}")
     except RuntimeError as error:
         st.error(str(error))
         st.stop()
@@ -139,7 +154,7 @@ with prediction_tab:
     )
     if source_mode == "Held-out benchmark record":
         selected_patient = st.selectbox(
-            "Held-out WBCD patient",
+            f"Held-out {active_module['short_title']} record",
             patients,
             format_func=lambda patient: (
                 f'{patient["name"]}'
@@ -147,19 +162,26 @@ with prediction_tab:
             ),
         )
     else:
-        uploaded = st.file_uploader("Upload a one-row CSV with the exact 30 feature names", type="csv")
+        feature_count = len(catalog["feature_names"])
+        uploaded = st.file_uploader(
+            f"Upload a one-row CSV with the exact {feature_count} feature names",
+            type="csv",
+        )
         if uploaded is None:
             st.info("Upload one named record to enable inference.")
             st.stop()
         frame = pd.read_csv(uploaded)
-        if frame.shape != (1, 30):
-            st.error("The CSV must contain exactly one row and 30 columns.")
+        if frame.shape != (1, feature_count):
+            st.error(f"The CSV must contain exactly one row and {feature_count} columns.")
             st.stop()
         try:
             validated = api_json(
                 "/ingest",
                 method="POST",
-                payload={"record": {name: float(frame.iloc[0][name]) for name in frame.columns}},
+                payload={
+                    "disease_id": disease_id,
+                    "record": {name: float(frame.iloc[0][name]) for name in frame.columns},
+                },
             )
         except (RuntimeError, ValueError) as error:
             st.error(str(error))
@@ -178,10 +200,12 @@ with prediction_tab:
         else:
             st.success("CSV schema and observed ranges validated.")
     previous_patient = st.session_state.get("dev_patient")
-    if previous_patient and previous_patient["id"] != selected_patient["id"]:
-        for key in ("dev_prediction", "dev_patient", "dev_explanation"):
+    active_record_key = f"{disease_id}:{selected_patient['id']}"
+    if st.session_state.get("dev_record_key") != active_record_key:
+        for key in ("dev_prediction", "dev_patient", "dev_explanation", "dev_report"):
             st.session_state.pop(key, None)
         st.session_state["dev_deep"] = False
+        st.session_state["dev_record_key"] = active_record_key
     selected_frame = pd.DataFrame(
         {
             "feature": catalog["selected_feature_names"],
@@ -191,14 +215,17 @@ with prediction_tab:
     st.dataframe(selected_frame, hide_index=True, width="stretch")
 
     if st.button("Run hybrid prediction", type="primary", width="stretch"):
-        for key in ("dev_prediction", "dev_patient", "dev_explanation"):
+        for key in ("dev_prediction", "dev_patient", "dev_explanation", "dev_report"):
             st.session_state.pop(key, None)
         try:
             with st.spinner("Running all six quantum members and both classical views…"):
                 st.session_state["dev_prediction"] = api_json(
                     "/predict",
                     method="POST",
-                    payload={"features": selected_patient["features"]},
+                    payload={
+                        "disease_id": disease_id,
+                        "features": selected_patient["features"],
+                    },
                 )
                 st.session_state["dev_patient"] = selected_patient
         except RuntimeError as error:
@@ -239,7 +266,7 @@ with prediction_tab:
             st.markdown(
                 f"""
                 <div class="result-card classical">
-                  <div class="result-label">Classical · full 30-feature LogReg</div>
+                  <div class="result-label">Classical · full {len(catalog['feature_names'])}-feature LogReg</div>
                   <div class="result-diagnosis">{full['label'].title()}</div>
                   <div class="result-confidence">{percentage(full['confidence'])} confidence</div>
                 </div>
@@ -258,13 +285,13 @@ with prediction_tab:
             (
                 "Quantum · VQC fast",
                 "Quantum · full six-model ensemble",
-                "Classical · full 30-feature LogReg",
+                f"Classical · full {len(catalog['feature_names'])}-feature LogReg",
                 "Classical · matched 4-feature LogReg",
             ),
         )
         deep = explanation_choice == "Quantum · full six-model ensemble"
         explanation_model = {
-            "Classical · full 30-feature LogReg": "classical_full_feature",
+            f"Classical · full {len(catalog['feature_names'])}-feature LogReg": "classical_full_feature",
             "Classical · matched 4-feature LogReg": "classical_same_4_feature",
         }.get(explanation_choice, "quantum")
         previous_explanation = st.session_state.get("dev_explanation")
@@ -297,6 +324,7 @@ with prediction_tab:
                         "/explain",
                         method="POST",
                         payload={
+                            "disease_id": disease_id,
                             "features": current_patient["features"],
                             "model": explanation_model,
                             "allow_slow": deep,
@@ -330,10 +358,34 @@ with prediction_tab:
                 horizontal=True,
             )
 
+        st.divider()
+        if st.button("Generate local evidence report", width="stretch"):
+            try:
+                st.session_state["dev_report"] = api_json(
+                    "/report",
+                    method="POST",
+                    payload={
+                        "disease_id": disease_id,
+                        "features": current_patient["features"],
+                    },
+                )
+            except RuntimeError as error:
+                st.error(str(error))
+        if report := st.session_state.get("dev_report"):
+            st.subheader("AI-assisted evidence summary")
+            st.write(report["ai_evidence_summary"])
+            st.download_button(
+                "Download report JSON",
+                json.dumps(report, indent=2),
+                file_name=f"{report['report_id']}.json",
+                mime="application/json",
+                width="stretch",
+            )
+
 with benchmark_tab:
     try:
-        baseline_payload = api_json("/baselines")
-        metrics_payload = api_json("/metrics")
+        baseline_payload = api_json(f"/baselines?disease_id={disease_id}")
+        metrics_payload = api_json(f"/metrics?disease_id={disease_id}")
     except RuntimeError as error:
         st.error(str(error))
         st.stop()

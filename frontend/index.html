@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Source+Sans+3:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/styles.css" />
-  <script src="/static/app.js" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=0.6.3" />
+  <script src="/static/app.js?v=0.6.3" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#analysis-workspace">Skip to analysis</a>
@@ -25,32 +25,40 @@
   </header>
   <main id="top">
     <div class="page-heading">
-      <div><p class="breadcrumb">Research workspace <span>/</span> Breast oncology</p><h1>Breast cancer signal analysis</h1><p class="page-description">One patient record. Quantum and classical perspectives, evaluated together.</p></div>
-      <div class="research-badge"><span class="badge-mark" aria-hidden="true">R</span><div><strong>Research use only</strong><small>SIH26139 · WBCD study</small></div></div>
+      <div><p class="breadcrumb">Research workspace <span>/</span> <span id="disease-breadcrumb">Breast oncology</span></p><h1 id="disease-title">Breast cancer signal analysis</h1><p class="page-description" id="disease-description">One patient record. Quantum and classical perspectives, evaluated together.</p></div>
+      <div class="research-badge"><span class="badge-mark" aria-hidden="true">R</span><div><strong>Research use only</strong><small id="study-badge">SIH26139 · multi-disease study</small></div></div>
     </div>
     <nav class="circuit-rail" aria-label="Analysis stages">
-      <div class="rail-step is-active" data-step="data"><span class="rail-node">01</span><div><strong>Data</strong><small>30 clinical measurements</small></div><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 5 5 5-5 5"/></svg></div>
+      <div class="rail-step is-active" data-step="data"><span class="rail-node">01</span><div><strong>Data</strong><small id="rail-data-caption">30 clinical measurements</small></div><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 5 5 5-5 5"/></svg></div>
       <div class="rail-step" data-step="select"><span class="rail-node">02</span><div><strong>Select</strong><small>4 named clinical features</small></div><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 5 5 5-5 5"/></svg></div>
       <div class="rail-step" data-step="model"><span class="rail-node">03</span><div><strong>Model</strong><small>Quantum + classical</small></div><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 5 5 5-5 5"/></svg></div>
       <div class="rail-step" data-step="explain"><span class="rail-node">04</span><div><strong>Explain</strong><small>SHAP &amp; LIME attribution</small></div></div>
     </nav>
     <div class="clinical-workspace" id="analysis-workspace">
       <aside class="patient-panel panel" aria-labelledby="patient-panel-title">
-        <div class="panel-heading"><span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 4H5v17h14V4h-3M9 2h6v4H9zM8 11h8M8 15h5"/></svg></span><div><h2 id="patient-panel-title">Patient record</h2><p>Held-out evaluation data</p></div></div>
+        <div class="panel-heading"><span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 4H5v17h14V4h-3M9 2h6v4H9zM8 11h8M8 15h5"/></svg></span><div><h2 id="patient-panel-title">Patient record</h2><p id="patient-panel-subtitle">Held-out evaluation data</p></div></div>
         <div class="patient-panel-body">
+          <label class="field-label" for="disease-select">Disease module</label>
+          <div class="select-shell disease-select-shell"><select id="disease-select" disabled><option>Loading modules…</option></select><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></div>
+          <p class="field-help" id="module-description">Each disease uses an independently trained and evaluated model bundle.</p>
           <label class="field-label" for="patient-source">Data source</label>
-          <div class="select-shell"><select id="patient-source" disabled><option value="catalog">Held-out benchmark record</option><option value="csv">Upload named CSV record</option></select><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></div>
+          <div class="select-shell"><select id="patient-source" disabled><option value="catalog">Held-out benchmark record</option><option value="manual">Enter values manually</option><option value="csv">Upload named CSV record</option></select><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></div>
           <div class="csv-ingestion" id="csv-ingestion" hidden>
             <label class="field-label" for="csv-file">One-row clinical CSV</label>
             <input id="csv-file" type="file" accept=".csv,text/csv" />
             <button class="secondary-button" id="csv-example" type="button">Download example CSV</button>
-            <p class="field-help">The header must contain all 30 WBCD feature names exactly. Values outside the benchmark's observed range are flagged, not silently rejected.</p>
+            <p class="field-help" id="csv-help">The header must contain every feature name for the selected module exactly. Values outside the benchmark's observed range are flagged, not silently rejected.</p>
             <div class="ingestion-warnings" id="ingestion-warnings" hidden role="status"></div>
+          </div>
+          <div class="manual-intake" id="manual-intake" hidden>
+            <div class="manual-intake-head"><strong>Module input form</strong><span>Benchmark schema</span></div>
+            <div class="manual-fields" id="manual-fields"></div>
+            <button class="secondary-button" id="use-manual-record" type="button">Use entered values</button>
           </div>
           <label class="field-label" id="patient-select-label" for="patient-select">Select study record</label>
           <div class="select-shell"><select id="patient-select" disabled><option>Waiting for models…</option></select><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></div>
           <p class="field-help" id="patient-help">The model service is initializing. Controls will become available when it is ready.</p>
-          <dl class="record-meta"><div><dt>Source</dt><dd id="record-source">Wisconsin Breast Cancer</dd></div><div><dt>Partition</dt><dd id="record-partition"><span class="subtle-dot"></span>Held-out test set</dd></div><div><dt>Record</dt><dd id="record-id">—</dd></div></dl>
+          <dl class="record-meta"><div><dt>Source</dt><dd id="record-source">Benchmark dataset</dd></div><div><dt>Partition</dt><dd id="record-partition"><span class="subtle-dot"></span>Held-out test set</dd></div><div><dt>Record</dt><dd id="record-id">—</dd></div></dl>
           <div class="selected-signal" aria-live="polite">
             <div class="selected-signal-head"><h3>Selected measurements</h3><span>Raw values</span></div>
             <div class="feature-chips" id="selected-feature-chips"><div class="chip-skeleton"></div><div class="chip-skeleton"></div><div class="chip-skeleton"></div><div class="chip-skeleton"></div></div>
@@ -84,14 +92,25 @@
             </article>
             <article class="result-card classical-card" id="classical-card">
               <div class="result-card-head"><div><p class="result-overline">CLASSICAL</p><h3>Full-feature baseline</h3></div><span class="model-symbol" aria-hidden="true">C</span></div>
-              <p class="model-subtitle">Logistic regression · all 30 clinical features</p>
+              <p class="model-subtitle" id="classical-model-subtitle">Logistic regression · all module features</p>
               <div class="dial-wrap"><svg class="measurement-dial" viewBox="0 0 240 240" role="img" aria-labelledby="classical-dial-title"><title id="classical-dial-title">Classical prediction confidence</title><circle class="dial-ticks" cx="120" cy="120" r="101"/><circle class="dial-track" cx="120" cy="120" r="82"/><circle class="dial-progress classical-progress" id="classical-progress" cx="120" cy="120" r="82"/></svg><div class="dial-center"><span class="dial-value" id="classical-confidence">—</span><small>MODEL CONFIDENCE</small></div></div>
               <div class="diagnosis-block"><span>Predicted class</span><strong id="classical-label">—</strong></div>
               <div class="card-foot fair-comparison"><span>Same-4-feature check</span><strong id="same-four-label">—</strong><span class="same-four-meter" aria-hidden="true"><span id="same-four-fill"></span></span><strong id="same-four-confidence">—</strong></div>
             </article>
           </div>
           <p class="clinical-note"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 9v5m0-8h.01"/></svg>Model confidence is not a clinical risk estimate. These research outputs must not guide patient care.</p>
+          <div class="report-actions">
+            <div><strong>Evidence report</strong><span>Local, structured, and printable—no patient data leaves this device.</span></div>
+            <button class="secondary-button report-button" id="report-button" type="button">Generate AI evidence report</button>
+          </div>
           <details class="model-detail panel"><summary><span>Quantum ensemble composition <small>Individual outputs &amp; OOB weights</small></span><span class="summary-icon">+</span></summary><div class="member-list" id="quantum-members"></div></details>
+        </section>
+        <section class="report-section panel" id="report-section" hidden aria-labelledby="report-title">
+          <div class="explain-heading"><div><p class="eyebrow">AI-ASSISTED EVIDENCE SUMMARY</p><h2 id="report-title">Screening analysis report</h2></div><span class="method-badge">LOCAL · NO CLOUD AI</span></div>
+          <p class="explain-intro" id="report-summary"></p>
+          <div class="report-facts" id="report-facts"></div>
+          <p class="one-number-note">The summary is constrained to measured model output and retained evidence. It is not a diagnosis, prescription, or substitute for a clinician.</p>
+          <div class="report-downloads"><button class="secondary-button" id="download-report" type="button">Download HTML report</button><button class="explain-button" id="print-report" type="button"><span>Print / Save PDF</span></button></div>
         </section>
         <section class="explain-section panel" id="explain-section" hidden aria-labelledby="explain-title">
           <div class="explain-heading"><div><p class="eyebrow">FEATURE ATTRIBUTION</p><h2 id="explain-title">Understand the contributing features</h2></div><span class="method-badge">SHAP + LIME</span></div>
@@ -100,7 +119,7 @@
             <div class="scope-control" role="group" aria-label="Explanation depth">
               <button class="scope-option is-selected" type="button" data-scope="quantum-fast" aria-pressed="true"><span class="scope-radio" aria-hidden="true"></span><span><strong>Quantum fast <em>DEFAULT</em></strong><small>VQC sub-ensemble · ~7–30 s</small></span></button>
               <button class="scope-option" type="button" data-scope="quantum-deep" aria-pressed="false"><span class="scope-radio" aria-hidden="true"></span><span><strong>Quantum full</strong><small>All six models · 70 s or longer</small></span></button>
-              <button class="scope-option" type="button" data-scope="classical-full" aria-pressed="false"><span class="scope-radio" aria-hidden="true"></span><span><strong>Classical full</strong><small>LogReg · all 30 features</small></span></button>
+              <button class="scope-option" type="button" data-scope="classical-full" aria-pressed="false"><span class="scope-radio" aria-hidden="true"></span><span><strong>Classical full</strong><small id="classical-scope-caption">LogReg · all module features</small></span></button>
               <button class="scope-option" type="button" data-scope="classical-same" aria-pressed="false"><span class="scope-radio" aria-hidden="true"></span><span><strong>Classical matched</strong><small>LogReg · same 4 features</small></span></button>
             </div>
             <button class="explain-button" id="explain-button" type="button"><span>Generate attribution</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></button>
@@ -109,7 +128,7 @@
           <div class="explanation-loading" id="explanation-loading" hidden role="status"><span class="progress-spinner" aria-hidden="true"></span><div class="loading-copy"><p class="loading-kicker">COMPUTING EXPLANATION</p><h3 id="explanation-loading-title">Evaluating clinical feature contributions</h3><p id="explanation-loading-detail">SHAP and LIME are evaluating the selected clinical features.</p><div class="elapsed-row"><span id="explanation-elapsed">00:00 elapsed</span><span id="explanation-expected">VQC attribution · timing varies by device</span></div><div class="activity-line" aria-hidden="true"><span></span></div></div></div>
           <div class="explanation-result" id="explanation-result" hidden>
             <div class="explanation-result-head"><span class="attribution-status"><span aria-hidden="true">✓</span>Attribution complete</span><span class="scope-readout">Explained scope <strong id="scope-readout">VQC FAST</strong></span></div>
-            <div class="attribution-legend" aria-label="Attribution direction legend"><span><i class="legend-malignant"></i>Toward malignant</span><span><i class="legend-benign"></i>Toward benign</span><span class="legend-note">SHAP bar <b>│</b> LIME marker</span></div>
+            <div class="attribution-legend" aria-label="Attribution direction legend"><span><i class="legend-malignant"></i><span id="toward-condition-label">Toward malignant</span></span><span><i class="legend-benign"></i><span id="toward-reference-label">Toward benign</span></span><span class="legend-note">SHAP bar <b>│</b> LIME marker</span></div>
             <div class="attribution-list" id="attribution-list"></div>
             <p class="one-number-note">Attribution describes feature influence within the selected scope; it is not a second prediction or a clinical explanation of disease.</p>
           </div>
@@ -117,20 +136,20 @@
       </div>
     </div>
     <section class="evidence-section panel" id="methodology" aria-labelledby="evidence-title">
-      <div class="evidence-heading"><div><p class="eyebrow">VALIDATION RECORD</p><h2 id="evidence-title">Methodology &amp; evidence</h2></div><span class="method-badge">3 seeds · 100 epochs · 200-row training pool</span></div>
-      <div class="evidence-grid"><div><span>QUANTUM ENSEMBLE</span><strong>93.86–94.74<span>%</span></strong><small>Held-out accuracy range</small></div><div><span>STRONGEST QUANTUM MEMBER</span><strong>93.86–94.74<span>%</span></strong><small>Angle-embedding QSVM</small></div><div><span>PAIRED COMPARISON</span><strong>p &gt; 0.56</strong><small>No significant difference detected</small></div></div>
-      <div class="evidence-note"><strong>Stable results, not a superiority claim.</strong><p>The ensemble reduced the observed VQC-family variability and statistically tied the strongest individual quantum model rather than beating it. Classical baselines are retained in both full-feature and same-four-feature configurations.</p></div>
+      <div class="evidence-heading"><div><p class="eyebrow">VALIDATION RECORD</p><h2 id="evidence-title">Methodology &amp; evidence</h2></div><span class="method-badge" id="evidence-method-badge">3 seeds · 100 epochs · 200-row training pool</span></div>
+      <div class="evidence-grid"><div><span id="evidence-primary-label">QUANTUM ENSEMBLE</span><strong id="evidence-primary-value">93.86–94.74<span>%</span></strong><small id="evidence-primary-detail">Held-out accuracy range</small></div><div><span id="evidence-secondary-label">STRONGEST QUANTUM MEMBER</span><strong id="evidence-secondary-value">93.86–94.74<span>%</span></strong><small id="evidence-secondary-detail">Angle-embedding QSVM</small></div><div><span id="evidence-tertiary-label">PAIRED COMPARISON</span><strong id="evidence-tertiary-value">p &gt; 0.56</strong><small id="evidence-tertiary-detail">No significant difference detected</small></div></div>
+      <div class="evidence-note"><strong id="evidence-note-title">Stable results, not a superiority claim.</strong><p id="evidence-note-copy">The ensemble reduced the observed VQC-family variability and statistically tied the strongest individual quantum model rather than beating it. Classical baselines are retained in both full-feature and same-four-feature configurations.</p></div>
       <div class="clinical-evidence" id="clinical-evidence" aria-live="polite">
-        <div><strong>Malignant sensitivity &amp; specificity</strong><span id="clinical-metric-status">Loading retained disease-oriented metrics…</span></div>
-        <div><strong>Five-fold generalization</strong><span id="cv-status">Loading leakage-safe cross-validation evidence…</span></div>
+        <div><strong id="clinical-metric-title">Malignant sensitivity &amp; specificity</strong><span id="clinical-metric-status">Loading retained disease-oriented metrics…</span></div>
+        <div><strong id="generalization-title">Five-fold generalization</strong><span id="cv-status">Loading leakage-safe cross-validation evidence…</span></div>
         <div><strong>Computational efficiency</strong><span id="efficiency-status">Loading measured fit and inference timings…</span></div>
       </div>
       <div class="cv-comparison" aria-live="polite">
-        <div class="cv-comparison-head"><strong>Leakage-safe five-fold comparison</strong><span>Malignant is the positive condition</span></div>
+        <div class="cv-comparison-head"><strong id="comparison-title">Leakage-safe five-fold comparison</strong><span id="positive-condition-label">Malignant is the positive condition</span></div>
         <div class="table-scroll"><table><thead><tr><th>Model view</th><th>Accuracy</th><th>Sensitivity</th><th>Specificity</th><th>ROC-AUC</th></tr></thead><tbody id="cv-comparison-body"><tr><td colspan="5">Loading retained fold metrics…</td></tr></tbody></table></div>
       </div>
     </section>
   </main>
-  <footer><span><strong>Q-TRACE</strong> <span>Hybrid quantum-classical research</span></span><p>Simulator-based · Wisconsin Breast Cancer Dataset</p><span class="footer-disclaimer">Research prototype. Not for clinical use.</span></footer>
+  <footer><span><strong>Q-TRACE</strong> <span>Hybrid quantum-classical research</span></span><p id="footer-dataset">Simulator-based · Multi-disease biomedical benchmarks</p><span class="footer-disclaimer">Research prototype. Not for clinical use.</span></footer>
 </body>
 </html>

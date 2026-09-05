@@ -67,6 +67,27 @@ def test_judge_frontend_supports_named_csv_ingestion() -> None:
     assert "parseCsvRecord" in source
 
 
+def test_judge_frontend_supports_disease_modules_manual_intake_and_reports() -> None:
+    html = (PROJECT_ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    source = (PROJECT_ROOT / "frontend" / "app.js").read_text(encoding="utf-8")
+
+    for element_id in (
+        "disease-select",
+        "manual-intake",
+        "manual-fields",
+        "report-button",
+        "report-section",
+        "download-report",
+        "print-report",
+    ):
+        assert f'id="{element_id}"' in html
+    for endpoint in ('fetchJson("/diseases"', 'fetchJson("/report"'):
+        assert endpoint in source
+    assert "disease_id: state.activeDiseaseId" in source
+    assert "buildPrintableReport" in source
+    assert "Print / Save PDF" in html
+
+
 def test_frontend_surfaces_malignant_sensitivity_and_cross_validation() -> None:
     html = (PROJECT_ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     source = (PROJECT_ROOT / "frontend" / "app.js").read_text(encoding="utf-8")

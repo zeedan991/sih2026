@@ -21,6 +21,18 @@ def dashboard(monkeypatch):
         path = urlparse(request.full_url).path
         if path == "/health":
             payload = runtime.health_payload()
+        elif path == "/diseases":
+            payload = {
+                "default_disease_id": "breast_cancer",
+                "modules": [
+                    {
+                        "disease_id": "breast_cancer",
+                        "short_title": "Breast oncology",
+                        "dataset_name": "Wisconsin Breast Cancer Diagnostic",
+                        "selected_feature_names": runtime.health_payload()["selected_features"],
+                    }
+                ],
+            }
         elif path == "/patients":
             payload = runtime.patients_payload(12)
             second = dict(payload["patients"][0], id=8, name="WBCD test patient 008")

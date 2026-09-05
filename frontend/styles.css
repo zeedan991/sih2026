@@ -91,6 +91,16 @@ main { max-width: 1408px; margin: 0 auto; padding: 28px 28px 40px; }
 .csv-ingestion input[type="file"] { width: 100%; margin: 5px 0 2px; font: 500 0.82rem/1.4 "Source Sans 3", sans-serif; color: var(--ink); }
 .secondary-button { margin-top: 8px; border: 1px solid var(--line-strong); background: #fff; color: var(--ink); padding: 8px 10px; font: 600 0.78rem/1.2 "Source Sans 3", sans-serif; cursor: pointer; }
 .secondary-button:hover { border-color: var(--quantum-indigo); color: var(--quantum-indigo); }
+.disease-select-shell { border-color: color-mix(in srgb, var(--quantum-indigo) 42%, var(--line)); box-shadow: 0 8px 22px rgba(74, 63, 140, 0.08); }
+.manual-intake { margin-top: 12px; border: 1px solid var(--line); background: #f8faf9; padding: 12px; }
+.manual-intake-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; }
+.manual-intake-head strong { font: 600 0.78rem/1.2 "Space Grotesk", sans-serif; }
+.manual-intake-head span { color: var(--muted); font: 500 0.62rem/1.2 "IBM Plex Mono", monospace; text-transform: uppercase; }
+.manual-fields { display: grid; gap: 8px; max-height: 310px; overflow: auto; padding-right: 4px; }
+.manual-field { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 8px; align-items: center; }
+.manual-field label { color: var(--ink-soft); font-size: 0.74rem; overflow-wrap: anywhere; }
+.manual-field input,
+.manual-field select { width: 100%; border: 1px solid var(--line-strong); background: #fff; padding: 7px 8px; color: var(--ink); font: 500 0.72rem/1.2 "IBM Plex Mono", monospace; }
 .ingestion-warnings { margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--caution-amber); background: #fff9ed; color: #684b17; font-size: 0.8rem; }
 .clinical-evidence { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin-top: 16px; background: var(--line); border: 1px solid var(--line); }
 .clinical-evidence > div { display: grid; gap: 5px; padding: 14px; background: #fff; }
@@ -205,6 +215,18 @@ summary::-webkit-details-marker { display: none; }
 .member-row strong { font-weight: 600; font-size: 10px; }
 .member-kind { font: 400 9px var(--font-mono); color: #899298; }
 .explain-section { margin-top: 18px; padding: 22px; }
+.report-actions { margin-top: 14px; padding: 14px 15px; border: 1px solid var(--line); border-left: 3px solid var(--signal-teal); background: rgba(14, 124, 123, 0.045); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.report-actions div { display: grid; gap: 2px; }
+.report-actions strong { font: 600 0.88rem/1.2 "Space Grotesk", sans-serif; }
+.report-actions span { color: var(--muted); font-size: 0.76rem; }
+.report-button { margin: 0; white-space: nowrap; }
+.report-section { margin-top: 18px; padding: 22px; border-top: 3px solid var(--signal-teal); }
+.report-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
+.report-fact { padding: 13px; border: 1px solid var(--line); background: #fff; display: grid; gap: 4px; }
+.report-fact span { color: var(--muted); font: 600 0.66rem/1.2 "IBM Plex Mono", monospace; letter-spacing: .06em; text-transform: uppercase; }
+.report-fact strong { font: 600 0.92rem/1.3 "Space Grotesk", sans-serif; overflow-wrap: anywhere; }
+.report-downloads { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.report-downloads .secondary-button { margin: 0; }
 .explain-heading, .evidence-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
 .explain-heading h2 { font-size: 17px; }
 .method-badge { font: 400 9px var(--font-mono); color: #78858C; border: 1px solid #E1E7E5; background: #FAFBFA; padding: 5px 7px; border-radius: 4px; white-space: nowrap; }
@@ -263,8 +285,10 @@ summary::-webkit-details-marker { display: none; }
 .attribution-bar.is-negative { right: 50%; background: #A88755; transform-origin: right; }
 .lime-marker { position: absolute; left: var(--marker-position); top: 3px; height: 22px; width: 2px; background: #34454D; z-index: 2; }
 .attribution-direction { font-size: 9px; text-align: right; color: #7B898D; }
-.attribution-direction.toward-benign { color: var(--signal-teal); }
-.attribution-direction.toward-malignant { color: #927447; }
+.attribution-direction.toward-benign,
+.attribution-direction.toward-negative-screening { color: var(--signal-teal); }
+.attribution-direction.toward-malignant,
+.attribution-direction.toward-positive-screening { color: #927447; }
 .one-number-note { font-size: 10px; color: #8B959A; line-height: 1.65; border-top: 1px solid #EDF0EF; padding-top: 12px; margin-top: 2px; }
 .evidence-section { margin-top: 30px; padding: 23px 26px 20px; }
 .evidence-heading h2 { font-size: 18px; }
@@ -335,6 +359,9 @@ footer strong { color: #67747B; font-family: var(--font-display); letter-spacing
   footer p { display: none; }
 }
 @media (max-width: 720px) {
+  .report-actions { align-items: stretch; flex-direction: column; }
+  .report-facts { grid-template-columns: 1fr; }
+  .report-downloads { flex-direction: column; }
   .clinical-evidence { grid-template-columns: 1fr; }
   .site-header { height: 65px; }
   .header-inner { padding: 0 18px; gap: 16px; }

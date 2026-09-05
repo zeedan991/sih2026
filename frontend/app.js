@@ -5,10 +5,14 @@ const DIAL_CIRCUMFERENCE = 2 * Math.PI * 82;
 
 const state = {
   health: null,
+  diseases: null,
+  activeDiseaseId: "breast_cancer",
+  activeModule: null,
   catalog: null,
   patient: null,
   prediction: null,
   explanation: null,
+  report: null,
   deepExplanation: false,
   explanationModel: "quantum",
   healthTimer: null,
@@ -21,10 +25,23 @@ const elements = {
   serviceState: document.querySelector("#service-state"),
   serviceStateLabel: document.querySelector("#service-state-label"),
   runtimeContext: document.querySelector("#runtime-context"),
+  diseaseSelect: document.querySelector("#disease-select"),
+  diseaseBreadcrumb: document.querySelector("#disease-breadcrumb"),
+  diseaseTitle: document.querySelector("#disease-title"),
+  diseaseDescription: document.querySelector("#disease-description"),
+  studyBadge: document.querySelector("#study-badge"),
+  moduleDescription: document.querySelector("#module-description"),
+  railDataCaption: document.querySelector("#rail-data-caption"),
+  patientPanelSubtitle: document.querySelector("#patient-panel-subtitle"),
+  csvHelp: document.querySelector("#csv-help"),
+  footerDataset: document.querySelector("#footer-dataset"),
   patientSource: document.querySelector("#patient-source"),
   csvIngestion: document.querySelector("#csv-ingestion"),
   csvFile: document.querySelector("#csv-file"),
   csvExample: document.querySelector("#csv-example"),
+  manualIntake: document.querySelector("#manual-intake"),
+  manualFields: document.querySelector("#manual-fields"),
+  useManualRecord: document.querySelector("#use-manual-record"),
   ingestionWarnings: document.querySelector("#ingestion-warnings"),
   patientSelect: document.querySelector("#patient-select"),
   patientSelectLabel: document.querySelector("#patient-select-label"),
@@ -52,6 +69,8 @@ const elements = {
   classicalProgress: document.querySelector("#classical-progress"),
   classicalConfidence: document.querySelector("#classical-confidence"),
   classicalLabel: document.querySelector("#classical-label"),
+  classicalModelSubtitle: document.querySelector("#classical-model-subtitle"),
+  classicalScopeCaption: document.querySelector("#classical-scope-caption"),
   quantumMembers: document.querySelector("#quantum-members"),
   sameFourLabel: document.querySelector("#same-four-label"),
   sameFourFill: document.querySelector("#same-four-fill"),
@@ -71,6 +90,30 @@ const elements = {
   cvStatus: document.querySelector("#cv-status"),
   efficiencyStatus: document.querySelector("#efficiency-status"),
   cvComparisonBody: document.querySelector("#cv-comparison-body"),
+  evidenceMethodBadge: document.querySelector("#evidence-method-badge"),
+  evidencePrimaryLabel: document.querySelector("#evidence-primary-label"),
+  evidencePrimaryValue: document.querySelector("#evidence-primary-value"),
+  evidencePrimaryDetail: document.querySelector("#evidence-primary-detail"),
+  evidenceSecondaryLabel: document.querySelector("#evidence-secondary-label"),
+  evidenceSecondaryValue: document.querySelector("#evidence-secondary-value"),
+  evidenceSecondaryDetail: document.querySelector("#evidence-secondary-detail"),
+  evidenceTertiaryLabel: document.querySelector("#evidence-tertiary-label"),
+  evidenceTertiaryValue: document.querySelector("#evidence-tertiary-value"),
+  evidenceTertiaryDetail: document.querySelector("#evidence-tertiary-detail"),
+  evidenceNoteTitle: document.querySelector("#evidence-note-title"),
+  evidenceNoteCopy: document.querySelector("#evidence-note-copy"),
+  clinicalMetricTitle: document.querySelector("#clinical-metric-title"),
+  generalizationTitle: document.querySelector("#generalization-title"),
+  comparisonTitle: document.querySelector("#comparison-title"),
+  positiveConditionLabel: document.querySelector("#positive-condition-label"),
+  towardConditionLabel: document.querySelector("#toward-condition-label"),
+  towardReferenceLabel: document.querySelector("#toward-reference-label"),
+  reportButton: document.querySelector("#report-button"),
+  reportSection: document.querySelector("#report-section"),
+  reportSummary: document.querySelector("#report-summary"),
+  reportFacts: document.querySelector("#report-facts"),
+  downloadReport: document.querySelector("#download-report"),
+  printReport: document.querySelector("#print-report"),
 };
 
 function escapeHtml(value) {
@@ -126,10 +169,14 @@ function clearError() {
 function setBusy(busy) {
   state.isBusy = busy;
   elements.patientSelect.disabled = busy || !state.catalog;
+  elements.diseaseSelect.disabled = busy || !state.diseases;
   elements.patientSource.disabled = busy || !state.catalog;
   elements.csvFile.disabled = busy || !state.catalog;
+  elements.useManualRecord.disabled = busy || !state.catalog;
+  elements.manualFields.querySelectorAll("input, select").forEach((field) => { field.disabled = busy; });
   elements.predictButton.disabled = busy || !state.patient;
   elements.explainButton.disabled = busy || !state.prediction;
+  elements.reportButton.disabled = busy || !state.prediction;
   elements.scopeOptions.forEach((option) => { option.disabled = busy; });
   elements.predictButton.querySelector("span").textContent = busy
     ? "Analysis in progress…"
@@ -137,7 +184,10 @@ function setBusy(busy) {
 }
 
 function studyRecordId(patient) {
-  return `WBCD-${String(patient.id).padStart(3, "0")}`;
+  if (patient.id === "uploaded") return "UPLOADED-CSV";
+  if (patient.id === "manual") return "MANUAL-INPUT";
+  const prefix = state.activeDiseaseId === "early_diabetes" ? "UCI-DM" : "WBCD";
+  return `${prefix}-${String(patient.id).padStart(3, "0")}`;
 }
 
 function setServiceState(status, label) {
@@ -163,8 +213,10 @@ async function checkHealth() {
       setServiceState("ready", "Model service ready");
       const config = health.runtime_configuration;
       if (config) {
-        elements.runtimeContext.textContent = `Live runtime: ${config.quantum_training_limit} quantum training rows, ${config.classical_training_rows} classical training rows · ${config.vqc_epochs} VQC epochs · seed ${config.seed}. Benchmark evidence below is a separate three-seed, 200-row quantum run.`;
+        const moduleCount = health.disease_modules?.length || 2;
+        updateRuntimeContext(moduleCount, config);
       }
+      if (!state.diseases) await loadDiseases();
       if (!state.catalog) await loadPatients();
       await loadEvidence();
       // Keep polling after a transient catalog failure so a page reload is not
@@ -183,17 +235,82 @@ async function checkHealth() {
     }
     setServiceState("loading", "Training models · please wait");
     elements.patientHelp.textContent =
-      "Preparing four 100-epoch VQCs and two quantum SVMs. First startup can take a few minutes.";
+      "Preparing two disease modules, each with four 100-epoch VQCs and two quantum SVMs. First startup can take a few minutes.";
   } catch (error) {
     setServiceState("error", "Service unavailable");
     elements.patientHelp.textContent = "Start FastAPI on port 8000, then keep this page open.";
   }
 }
 
+async function loadDiseases() {
+  state.diseases = await fetchJson("/diseases");
+  state.activeDiseaseId = state.diseases.default_disease_id || "breast_cancer";
+  elements.diseaseSelect.innerHTML = state.diseases.modules
+    .map((module) => `<option value="${escapeHtml(module.disease_id)}">${escapeHtml(module.short_title)}</option>`)
+    .join("");
+  elements.diseaseSelect.value = state.activeDiseaseId;
+  elements.diseaseSelect.disabled = false;
+  updateDiseasePresentation();
+}
+
+function updateDiseasePresentation() {
+  state.activeModule = state.diseases?.modules.find(
+    (module) => module.disease_id === state.activeDiseaseId,
+  ) || null;
+  if (!state.activeModule) return;
+  const module = state.activeModule;
+  const [conditionLabel, referenceLabel] = module.class_labels;
+  elements.diseaseBreadcrumb.textContent = module.short_title;
+  elements.diseaseTitle.textContent = module.title;
+  elements.diseaseDescription.textContent = module.description;
+  elements.studyBadge.textContent = `SIH26139 · ${module.dataset_name}`;
+  elements.moduleDescription.textContent = `${module.domain}. Independently trained; ${module.dataset_license}.`;
+  elements.railDataCaption.textContent = `${module.feature_names.length} real clinical inputs`;
+  elements.patientPanelSubtitle.textContent = `${module.dataset_name} · held-out records`;
+  elements.csvHelp.textContent = `The header must contain all ${module.feature_names.length} selected-module feature names exactly. Binary questionnaire values use 0=No/Female and 1=Yes/Male.`;
+  elements.footerDataset.textContent = `Simulator-based · ${module.dataset_name}`;
+  elements.classicalModelSubtitle.textContent = `Logistic regression · all ${module.feature_names.length} module features`;
+  elements.classicalScopeCaption.textContent = `LogReg · all ${module.feature_names.length} features`;
+  elements.towardConditionLabel.textContent = `Toward ${conditionLabel}`;
+  elements.towardReferenceLabel.textContent = `Toward ${referenceLabel}`;
+  if (state.health?.runtime_configuration) {
+    updateRuntimeContext(state.health.disease_modules?.length || 2, state.health.runtime_configuration);
+  }
+  renderManualForm();
+}
+
+function updateRuntimeContext(moduleCount, config) {
+  const healthModule = state.health?.disease_modules?.find(
+    (module) => module.disease_id === state.activeDiseaseId,
+  );
+  const classicalRows = healthModule?.classical_training_rows ?? config.classical_training_rows;
+  const evidenceScope = state.activeDiseaseId === "early_diabetes"
+    ? "Evidence below includes its separate three-seed 20-row quantum evaluation."
+    : "Benchmark evidence below includes the separate three-seed, 200-row quantum run.";
+  elements.runtimeContext.textContent = `Live runtime: ${moduleCount} independent disease modules · ${config.quantum_training_limit} quantum training rows per module · ${classicalRows} classical training rows in this module · ${config.vqc_epochs} VQC epochs · seed ${config.seed}. ${evidenceScope}`;
+}
+
+function renderManualForm() {
+  if (!state.activeModule) return;
+  elements.manualFields.innerHTML = state.activeModule.feature_schema
+    .map((feature, index) => {
+      const label = escapeHtml(feature.name);
+      if (feature.kind === "binary") {
+        const options = feature.name === "gender"
+          ? '<option value="0">Female (0)</option><option value="1">Male (1)</option>'
+          : '<option value="0">No (0)</option><option value="1">Yes (1)</option>';
+        return `<div class="manual-field"><label for="manual-${index}">${label}</label><select id="manual-${index}" data-feature-index="${index}">${options}</select></div>`;
+      }
+      const midpoint = (Number(feature.observed_min) + Number(feature.observed_max)) / 2;
+      return `<div class="manual-field"><label for="manual-${index}">${label}</label><input id="manual-${index}" data-feature-index="${index}" type="number" step="any" min="${feature.observed_min}" max="${feature.observed_max}" value="${midpoint}" /></div>`;
+    })
+    .join("");
+}
+
 async function loadPatients() {
   clearError();
   try {
-    state.catalog = await fetchJson("/patients?limit=12");
+    state.catalog = await fetchJson(`/patients?limit=12&disease_id=${encodeURIComponent(state.activeDiseaseId)}`);
     elements.patientSelect.innerHTML = state.catalog.patients
       .map((patient, index) => {
         const suffix = patient.has_disagreement ? " · comparison case" : "";
@@ -224,7 +341,7 @@ function renderSelectedPatient(index) {
   if (!state.catalog) return;
   state.patient = state.catalog.patients[index];
   elements.recordId.textContent = studyRecordId(state.patient);
-  elements.recordSource.textContent = "Wisconsin Breast Cancer";
+  elements.recordSource.textContent = state.catalog.dataset_name || state.activeModule?.dataset_name || "Benchmark dataset";
   elements.recordPartition.textContent = "Held-out test set";
   elements.selectedFeatureChips.innerHTML = state.catalog.selected_feature_names
     .map(
@@ -258,8 +375,9 @@ function parseCsvRecord(text) {
   };
   const names = parseRow(rows[0]);
   const values = parseRow(rows[1]).map(Number);
-  if (names.length !== 30 || values.length !== 30 || values.some((value) => !Number.isFinite(value))) {
-    throw new Error("CSV must contain exactly 30 named, finite numeric values.");
+  const expectedCount = state.catalog?.feature_names?.length || 0;
+  if (names.length !== expectedCount || values.length !== expectedCount || values.some((value) => !Number.isFinite(value))) {
+    throw new Error(`CSV must contain exactly ${expectedCount} named, finite numeric values.`);
   }
   return Object.fromEntries(names.map((name, index) => [name, values[index]]));
 }
@@ -281,7 +399,7 @@ async function loadCsvRecord(file) {
     const record = parseCsvRecord(await file.text());
     const validated = await fetchJson("/ingest", {
       method: "POST",
-      body: JSON.stringify({ record }),
+      body: JSON.stringify({ disease_id: state.activeDiseaseId, record }),
     });
     const selectedIndices = state.catalog.selected_feature_names.map((name) => validated.feature_names.indexOf(name));
     state.patient = {
@@ -311,12 +429,62 @@ async function loadCsvRecord(file) {
   }
 }
 
+function useManualRecord() {
+  if (!state.catalog || !state.activeModule) return;
+  try {
+    const fields = [...elements.manualFields.querySelectorAll("input, select")];
+    const features = fields.map((field) => Number(field.value));
+    if (features.length !== state.catalog.feature_names.length || features.some((value) => !Number.isFinite(value))) {
+      throw new Error("Every module field needs a finite numeric value.");
+    }
+    state.patient = {
+      id: "manual",
+      name: "Manual module record",
+      true_label: null,
+      features,
+      selected_values: state.catalog.selected_feature_names.map(
+        (name) => features[state.catalog.feature_names.indexOf(name)],
+      ),
+      has_disagreement: false,
+    };
+    elements.recordId.textContent = "MANUAL-INPUT";
+    elements.recordSource.textContent = "User-entered module form";
+    elements.recordPartition.textContent = "Unlabelled inference record";
+    elements.selectedFeatureChips.innerHTML = state.catalog.selected_feature_names
+      .map((name, index) => `<div class="feature-chip"><span title="${escapeHtml(name)}">${escapeHtml(name)}</span><strong>${formatFeatureValue(state.patient.selected_values[index])}</strong></div>`)
+      .join("");
+    elements.predictButton.disabled = false;
+    resetResultForPatientChange();
+    elements.predictButton.disabled = false;
+  } catch (error) {
+    showError(`Manual record could not be used: ${error.message}`);
+  }
+}
+
 async function loadEvidence() {
   try {
-    const evidence = await fetchJson("/metrics");
+    const evidence = await fetchJson("/metrics" + `?disease_id=${encodeURIComponent(state.activeDiseaseId)}`);
     const repeated = evidence.generalization?.classical_three_seed;
     const crossValidation = evidence.generalization?.five_fold_cross_validation;
+    const diabetesRepeated = evidence.generalization?.early_diabetes_three_seed;
+    const positiveName = state.activeModule?.positive_class_name || "condition present";
+    elements.clinicalMetricTitle.textContent = `${labelCase(positiveName)} sensitivity & specificity`;
+    elements.positiveConditionLabel.textContent = `${labelCase(positiveName)} is the positive condition`;
     if (repeated) {
+      elements.evidenceMethodBadge.textContent = "3 seeds · 100 epochs · 200-row training pool";
+      elements.evidencePrimaryLabel.textContent = "QUANTUM ENSEMBLE";
+      elements.evidencePrimaryValue.textContent = "93.86–94.74%";
+      elements.evidencePrimaryDetail.textContent = "Held-out accuracy range";
+      elements.evidenceSecondaryLabel.textContent = "STRONGEST QUANTUM MEMBER";
+      elements.evidenceSecondaryValue.textContent = "93.86–94.74%";
+      elements.evidenceSecondaryDetail.textContent = "Angle-embedding QSVM";
+      elements.evidenceTertiaryLabel.textContent = "PAIRED COMPARISON";
+      elements.evidenceTertiaryValue.textContent = "p > 0.56";
+      elements.evidenceTertiaryDetail.textContent = "No significant difference detected";
+      elements.evidenceNoteTitle.textContent = "Stable results, not a superiority claim.";
+      elements.evidenceNoteCopy.textContent = "The ensemble reduced the observed VQC-family variability and statistically tied the strongest individual quantum model rather than beating it. Classical baselines are retained in both feature configurations.";
+      elements.generalizationTitle.textContent = "Five-fold generalization";
+      elements.comparisonTitle.textContent = "Leakage-safe five-fold comparison";
       const key = "classical/full_feature/logistic_regression";
       const metrics = repeated.summaries[key].metrics;
       elements.clinicalMetricStatus.textContent = `Full-feature LogReg: ${(metrics.malignant_sensitivity.mean * 100).toFixed(1)}% sensitivity, ${(metrics.specificity.mean * 100).toFixed(1)}% specificity across 3 seeds.`;
@@ -344,6 +512,41 @@ async function loadEvidence() {
         .filter(([, item]) => item)
         .map(([label, item]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${formatPercent(item.metrics.accuracy.mean)}</td><td>${formatPercent(item.metrics.malignant_sensitivity.mean)}</td><td>${formatPercent(item.metrics.specificity.mean)}</td><td>${Number(item.metrics.roc_auc.mean).toFixed(3)}</td></tr>`)
         .join("");
+    } else {
+      const live = evidence.quantum?.ensemble;
+      const classical = evidence.classical?.live_runtime?.full_feature?.logistic_regression;
+      if (live && classical) {
+        if (diabetesRepeated) {
+          const accuracy = diabetesRepeated.summaries.ensemble_accuracy;
+          const strongest = diabetesRepeated.summaries.members.qsvm_amplitude_2q.accuracy;
+          const strongestClassical = diabetesRepeated.summaries.classical_accuracy["full_feature/svm"];
+          elements.evidenceMethodBadge.textContent = "3 seeds · 100 epochs · 20-row training pool";
+          elements.evidencePrimaryLabel.textContent = "QUANTUM ENSEMBLE";
+          elements.evidencePrimaryValue.textContent = `${(accuracy.min * 100).toFixed(2)}–${(accuracy.max * 100).toFixed(2)}%`;
+          elements.evidencePrimaryDetail.textContent = `${(accuracy.mean * 100).toFixed(2)}% mean accuracy`;
+          elements.evidenceSecondaryLabel.textContent = "STRONGEST QUANTUM MEAN";
+          elements.evidenceSecondaryValue.textContent = `${(strongest.mean * 100).toFixed(2)}%`;
+          elements.evidenceSecondaryDetail.textContent = "Amplitude-embedding QSVM";
+          elements.evidenceTertiaryLabel.textContent = "STRONGEST CLASSICAL MEAN";
+          elements.evidenceTertiaryValue.textContent = `${(strongestClassical.mean * 100).toFixed(2)}%`;
+          elements.evidenceTertiaryDetail.textContent = "Full-feature SVM";
+          elements.evidenceNoteTitle.textContent = "Scalability evidence, not a superiority claim.";
+          elements.evidenceNoteCopy.textContent = "The same complete workflow trained on a second biomedical dataset. Classical models were stronger and the quantum ensemble varied across seeds; both findings remain visible.";
+        }
+        elements.generalizationTitle.textContent = "Three-seed generalization";
+        elements.comparisonTitle.textContent = "Held-out module comparison";
+        elements.clinicalMetricStatus.textContent = diabetesRepeated
+          ? `Three seeds: ${(diabetesRepeated.summaries.ensemble_condition_sensitivity.mean * 100).toFixed(1)}% mean sensitivity and ${(diabetesRepeated.summaries.ensemble_specificity.mean * 100).toFixed(1)}% mean specificity.`
+          : `Live held-out module: ${(live.condition_sensitivity * 100).toFixed(1)}% sensitivity and ${(live.specificity * 100).toFixed(1)}% specificity.`;
+        elements.cvStatus.textContent = diabetesRepeated
+          ? `Three-seed ensemble accuracy ${formatPercent(diabetesRepeated.summaries.ensemble_accuracy.mean)} (${formatPercent(diabetesRepeated.summaries.ensemble_accuracy.min)}–${formatPercent(diabetesRepeated.summaries.ensemble_accuracy.max)}); external validation is not claimed.`
+          : "Second-disease module is a scalability demonstration; repeated/fold evidence is not yet claimed.";
+        elements.efficiencyStatus.textContent = "All inference is local on a free PennyLane simulator; no paid service or patient-data upload is used.";
+        elements.cvComparisonBody.innerHTML = [
+          ["Quantum · six-model ensemble", live],
+          [`Classical · Logistic, ${state.catalog.feature_names.length} features`, classical],
+        ].map(([label, metrics]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${formatPercent(metrics.accuracy)}</td><td>${formatPercent(metrics.condition_sensitivity)}</td><td>${formatPercent(metrics.specificity)}</td><td>${Number(metrics.roc_auc).toFixed(3)}</td></tr>`).join("");
+      }
     }
   } catch (_error) {
     elements.clinicalMetricStatus.textContent = "Evidence is available from the developer console when the service is ready.";
@@ -355,9 +558,11 @@ function resetResultForPatientChange() {
   state.generation += 1;
   state.prediction = null;
   state.explanation = null;
+  state.report = null;
   elements.resultsEmpty.hidden = false;
   elements.resultsSection.hidden = true;
   elements.explainSection.hidden = true;
+  elements.reportSection.hidden = true;
   elements.explanationResult.hidden = true;
   elements.explanationLoading.hidden = true;
   elements.disagreementBanner.hidden = true;
@@ -454,7 +659,7 @@ async function runPrediction() {
   try {
     const payload = await fetchJson("/predict", {
       method: "POST",
-      body: JSON.stringify({ features }),
+      body: JSON.stringify({ disease_id: state.activeDiseaseId, features }),
     });
     if (generation === state.generation) renderPrediction(payload);
   } catch (error) {
@@ -463,6 +668,98 @@ async function runPrediction() {
     elements.analysisLoading.hidden = true;
     setBusy(false);
   }
+}
+
+function buildPrintableReport(report) {
+  const prediction = report.prediction;
+  const quantum = prediction.quantum;
+  const classical = prediction.classical.full_feature;
+  const matched = prediction.classical.same_4_feature;
+  const measurements = report.selected_measurements
+    .map((item) => `<tr><td>${escapeHtml(item.feature_name)}</td><td>${escapeHtml(formatFeatureValue(item.value))}</td></tr>`)
+    .join("");
+  const members = quantum.per_model
+    .map((member) => `<tr><td>${escapeHtml(member.name)}</td><td>${escapeHtml(member.paradigm)}</td><td>${escapeHtml(labelCase(member.label))}</td><td>${escapeHtml(formatPercent(member.confidence))}</td><td>${escapeHtml(formatPercent(member.weight))}</td></tr>`)
+    .join("");
+  const limitations = report.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const fairness = report.fairness_audit
+    ? `<h2>Subgroup audit</h2><p>${escapeHtml(report.fairness_audit.interpretation)}</p><table><thead><tr><th>System</th><th>Group</th><th>n</th><th>Accuracy</th><th>Sensitivity</th><th>Specificity</th></tr></thead><tbody>${Object.entries(report.fairness_audit.quantum_ensemble).map(([group, metrics]) => `<tr><td>Quantum ensemble</td><td>${escapeHtml(group)}</td><td>${metrics.n}</td><td>${formatPercent(metrics.accuracy)}</td><td>${metrics.condition_sensitivity == null ? "—" : formatPercent(metrics.condition_sensitivity)}</td><td>${metrics.specificity == null ? "—" : formatPercent(metrics.specificity)}</td></tr>`).join("")}${Object.entries(report.fairness_audit.classical_full_feature_logistic_regression).map(([group, metrics]) => `<tr><td>Classical full</td><td>${escapeHtml(group)}</td><td>${metrics.n}</td><td>${formatPercent(metrics.accuracy)}</td><td>${metrics.condition_sensitivity == null ? "—" : formatPercent(metrics.condition_sensitivity)}</td><td>${metrics.specificity == null ? "—" : formatPercent(metrics.specificity)}</td></tr>`).join("")}</tbody></table>`
+    : "";
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(report.report_id)} · Q-TRACE</title><style>
+    body{font:15px/1.5 Arial,sans-serif;color:#12181c;margin:40px;max-width:960px}h1,h2{font-family:Arial,sans-serif}h1{border-bottom:4px solid #4a3f8c;padding-bottom:12px}.meta{color:#52616a}.notice{border-left:4px solid #b8863d;background:#fbf7ef;padding:12px 16px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{border:1px solid #d7dcdd;padding:14px}.card.q{border-top:4px solid #4a3f8c}.card.c{border-top:4px solid #0e7c7b}table{border-collapse:collapse;width:100%;margin:12px 0 22px}th,td{border:1px solid #d7dcdd;padding:8px;text-align:left}th{background:#f1f3f2}small{color:#52616a}@media print{body{margin:20px}.no-print{display:none}}
+  </style></head><body>
+    <h1>Q-TRACE screening analysis report</h1>
+    <p class="meta">${escapeHtml(report.report_id)} · ${escapeHtml(report.generated_at)}<br>${escapeHtml(report.title)} · ${escapeHtml(report.dataset.name)}</p>
+    <p class="notice"><strong>Research use only.</strong> Model confidence is not clinical risk, and this report is not a diagnosis.</p>
+    <h2>AI-assisted evidence summary</h2><p>${escapeHtml(report.ai_evidence_summary)}</p>
+    <div class="cards"><div class="card q"><small>QUANTUM ENSEMBLE</small><h3>${escapeHtml(labelCase(quantum.label))}</h3><strong>${escapeHtml(formatPercent(quantum.confidence))} confidence</strong></div><div class="card c"><small>CLASSICAL FULL</small><h3>${escapeHtml(labelCase(classical.label))}</h3><strong>${escapeHtml(formatPercent(classical.confidence))} confidence</strong></div><div class="card c"><small>CLASSICAL MATCHED-4</small><h3>${escapeHtml(labelCase(matched.label))}</h3><strong>${escapeHtml(formatPercent(matched.confidence))} confidence</strong></div></div>
+    <h2>Selected clinical inputs</h2><table><thead><tr><th>Feature</th><th>Raw value</th></tr></thead><tbody>${measurements}</tbody></table>
+    <h2>Quantum ensemble audit</h2><table><thead><tr><th>Model</th><th>Type</th><th>Output</th><th>Confidence</th><th>OOB weight</th></tr></thead><tbody>${members}</tbody></table>
+    <h2>Evidence boundary</h2><p>Condition-positive sensitivity: ${escapeHtml(formatPercent(report.held_out_evidence.quantum_ensemble.condition_sensitivity))}; specificity: ${escapeHtml(formatPercent(report.held_out_evidence.quantum_ensemble.specificity))}. ${escapeHtml(report.held_out_evidence.scope)}</p>
+    ${fairness}
+    <h2>Limitations and responsible use</h2><ul>${limitations}</ul>
+    <p><small>Dataset: <a href="${escapeHtml(report.dataset.source)}">${escapeHtml(report.dataset.source)}</a> · ${escapeHtml(report.dataset.license)}. Generated locally; the server does not retain the record.</small></p>
+  </body></html>`;
+}
+
+function renderReport(report) {
+  state.report = report;
+  elements.reportSummary.textContent = report.ai_evidence_summary;
+  const prediction = report.prediction;
+  elements.reportFacts.innerHTML = [
+    ["Report ID", report.report_id],
+    ["Disease module", report.title],
+    ["Model agreement", prediction.agreement.agrees ? "Quantum and classical agree" : "Disagreement preserved"],
+  ].map(([label, value]) => `<div class="report-fact"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
+  elements.reportSection.hidden = false;
+  elements.reportSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+async function runReport() {
+  if (!state.patient || !state.prediction || state.isBusy) return;
+  clearError();
+  const generation = state.generation;
+  setBusy(true);
+  elements.reportButton.textContent = "Generating evidence report…";
+  try {
+    const report = await fetchJson("/report", {
+      method: "POST",
+      body: JSON.stringify({
+        disease_id: state.activeDiseaseId,
+        features: state.patient.features.slice(),
+      }),
+    });
+    if (generation === state.generation) renderReport(report);
+  } catch (error) {
+    showError(`Report could not be generated: ${error.message}`);
+  } finally {
+    elements.reportButton.textContent = "Generate AI evidence report";
+    setBusy(false);
+  }
+}
+
+function downloadReportHtml() {
+  if (!state.report) return;
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([buildPrintableReport(state.report)], { type: "text/html" }));
+  link.download = `${state.report.report_id}.html`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function printReportDocument() {
+  if (!state.report) return;
+  const printable = window.open("", "_blank");
+  if (!printable) {
+    showError("The browser blocked the print window. Allow pop-ups, then try again.");
+    return;
+  }
+  printable.opener = null;
+  printable.document.open();
+  printable.document.write(buildPrintableReport(state.report));
+  printable.document.close();
+  printable.focus();
+  window.setTimeout(() => printable.print(), 250);
 }
 
 function selectExplanationScope(scope) {
@@ -596,6 +893,7 @@ async function runExplanation() {
     const payload = await fetchJson("/explain", {
       method: "POST",
       body: JSON.stringify({
+        disease_id: state.activeDiseaseId,
         features,
         model: state.explanationModel,
         allow_slow: state.deepExplanation,
@@ -623,13 +921,32 @@ function forceDisagreementForVerification() {
 elements.patientSelect.addEventListener("change", (event) => {
   if (!state.isBusy) renderSelectedPatient(Number(event.target.value));
 });
+elements.diseaseSelect.addEventListener("change", async (event) => {
+  if (state.isBusy) return;
+  state.activeDiseaseId = event.target.value;
+  state.catalog = null;
+  state.patient = null;
+  updateDiseasePresentation();
+  resetResultForPatientChange();
+  elements.patientSource.value = "catalog";
+  elements.csvIngestion.hidden = true;
+  elements.manualIntake.hidden = true;
+  elements.patientSelectLabel.hidden = false;
+  elements.patientSelect.parentElement.hidden = false;
+  elements.patientSelect.disabled = true;
+  elements.patientSelect.innerHTML = "<option>Loading held-out records…</option>";
+  await loadPatients();
+  await loadEvidence();
+});
 elements.patientSource.addEventListener("change", (event) => {
   const upload = event.target.value === "csv";
+  const manual = event.target.value === "manual";
   elements.csvIngestion.hidden = !upload;
-  elements.patientSelectLabel.hidden = upload;
-  elements.patientSelect.parentElement.hidden = upload;
-  elements.patientSelect.disabled = upload || state.isBusy;
-  if (!upload) renderSelectedPatient(Number(elements.patientSelect.value || 0));
+  elements.manualIntake.hidden = !manual;
+  elements.patientSelectLabel.hidden = upload || manual;
+  elements.patientSelect.parentElement.hidden = upload || manual;
+  elements.patientSelect.disabled = upload || manual || state.isBusy;
+  if (!upload && !manual) renderSelectedPatient(Number(elements.patientSelect.value || 0));
   else { state.patient = null; resetResultForPatientChange(); elements.predictButton.disabled = true; }
 });
 elements.csvFile.addEventListener("change", (event) => {
@@ -637,8 +954,12 @@ elements.csvFile.addEventListener("change", (event) => {
   if (file && !state.isBusy) loadCsvRecord(file);
 });
 elements.csvExample.addEventListener("click", downloadExampleCsv);
+elements.useManualRecord.addEventListener("click", useManualRecord);
 elements.predictButton.addEventListener("click", runPrediction);
 elements.explainButton.addEventListener("click", runExplanation);
+elements.reportButton.addEventListener("click", runReport);
+elements.downloadReport.addEventListener("click", downloadReportHtml);
+elements.printReport.addEventListener("click", printReportDocument);
 elements.scopeOptions.forEach((option) => {
   option.addEventListener("click", () => {
     if (!state.isBusy) selectExplanationScope(option.dataset.scope);
