@@ -18,7 +18,7 @@ Every requirement below traces back to one of these six. Objectives 4 (scalable/
 
 ## 2. Product vision
 
-A working, honestly-benchmarked, explainable hybrid quantum-classical classifier for early breast cancer detection — deployed as a clean web demo — that a technically literate judge could interrogate on methodology and come away convinced the team understands both the quantum ML and the clinical-trust angle, not just that they wired some libraries together.
+A working, honestly-benchmarked, explainable hybrid quantum-classical platform demonstrated through two independently trained disease modules — breast-mass classification and early diabetes screening — deployed as a clean web demo that a technically literate judge can interrogate. The reusable architecture is the product; it never claims one universal model can diagnose unrelated diseases.
 
 **This is not:** a diagnostic device, a claim of quantum computational advantage, or a finished clinical product. See `decisions.md` D-07 for why we don't pitch it as beating classical ML.
 
@@ -33,12 +33,12 @@ A working, honestly-benchmarked, explainable hybrid quantum-classical classifier
 ## 4. Functional requirements (MoSCoW)
 
 ### Must have (core deliverable — required to satisfy the PS)
-- **M1.** Load and preprocess WBCD: impute, scale, **select** 4 features (`SelectKBest`, ANOVA F-value — not PCA, see `decisions.md` D-13), quantum-range scale — see `architecture.md` §3.2
+- **M1.** Load and preprocess both bundled benchmarks (WBCD and UCI Early Stage Diabetes): split first, impute, scale, **select** 4 features (`SelectKBest`, ANOVA F-value — not PCA, see `decisions.md` D-13), then quantum-range scale. Labels and schemas stay disease-specific (`decisions.md` D-28).
 - **M2.** Working quantum classifiers from **both** paradigms the PS names — a VQC (with data re-uploading + weight re-mapping, `architecture.md` §3.3 / `decisions.md` D-11) **and** a quantum-kernel SVM (`architecture.md` §3.4–3.5 / `decisions.md` D-10) — using the corrected patterns in `decisions.md` D-02, D-03, D-15
-- **M3.** Classical baselines trained and evaluated on the same split, in **two configurations**: full 30 features (the realistic benchmark) and the same 4 selected features the quantum path sees (the fair comparison, `decisions.md` D-14) — at least 4 model types (LogReg, Random Forest, XGBoost, SVM) in each configuration
+- **M3.** Classical baselines trained and evaluated on the same split, in **two configurations**: all available module features (30 for WBCD, 16 for diabetes) and the same 4 selected features the quantum path sees (the fair comparison, `decisions.md` D-14) — Logistic Regression, Random Forest, XGBoost, and SVM in each configuration.
 - **M4.** **Every prediction shows both the quantum result and the classical result together, with equal visual weight, every time — not one primary and one buried.** This makes PS objectives 3 and 6 (benchmarking against classical, rigorously) visible in the product rather than buried in a report table — see `architecture.md` §1.1/§6.2 and `decisions.md` D-12 for the precise framing. Accuracy, malignant precision/recall/F1, sensitivity, specificity, confusion counts, ROC-AUC, and timing are retained across ≥3 random seeds for **both classical configurations**; the fold-isolated report supplies five-fold hybrid generalization evidence.
 - **M5.** SHAP-based explanation for at least one real prediction, showing feature attribution **using real clinical feature names** (achieved automatically by M1's feature-selection approach — see `decisions.md` D-13), for both a quantum and a classical prediction
-- **M6.** A functioning end-to-end web demo: upload or select patient data → see both predictions side by side → see explanation
+- **M6.** A functioning end-to-end web demo: select a disease module → upload or select a matching benchmark record → see both predictions side by side → see explanation → generate a local evidence report.
 - **M7.** Reproducible setup: `requirements.txt` + Dockerfile, one-command run
 - **M8.** Documentation of methodology and honest limitations (feeds the docx submission document)
 - **M9.** Two specific regression tests exist and pass before any UI work begins: cost-decreases (`decisions.md` D-02) and label-encoding-direction (`decisions.md` D-15) — both are silent-failure bugs that pass every accuracy check while being visibly wrong in a live demo
@@ -49,6 +49,7 @@ A working, honestly-benchmarked, explainable hybrid quantum-classical classifier
 - **S3.** The custom judge-facing frontend per the design system in `architecture.md` §6, not just the Streamlit debug view
 - **S4.** Statistical significance test (paired t-test) between ensemble and best single baseline
 - **S5.** Disagreement banner when quantum and classical predict different labels (`decisions.md` D-12) — surfaced honestly, not hidden
+- **S6.** Local AI-assisted evidence report with both paradigms, model audit, dataset attribution, limitations, optional subgroup evidence, and HTML/Print-to-PDF export (`decisions.md` D-29). No hosted LLM or paid API.
 
 ### Could have (bonus, time-boxed — see `roadmap.md` cut-line)
 - **C1.** Multimodal extension: CBIS-DDSM (imaging) + TCGA-BRCA (genomics) fusion, Q RadFusion-style
@@ -74,7 +75,7 @@ A working, honestly-benchmarked, explainable hybrid quantum-classical classifier
 
 ## 6. Success criteria
 
-**Implementation audit, September 3, 2026:** The user approved the D-27 extension. M4 now retains malignant-focused three-seed classical metrics for both feature configurations; M5 exposes attribution-only quantum and classical SHAP/LIME scopes; structured CSV ingestion validates the exact named 30-feature schema; and five-fold preprocessing is isolated inside every fold. D-22 still accepts the ensemble's lack of a demonstrated accuracy win without retuning it. External-cohort validation, real hardware, and clinical readiness remain explicitly out of scope.
+**Implementation audit, September 4, 2026:** D-27's breast-oncology evidence remains the strongest retained validation record. D-28 adds an independently trained early-diabetes module and dynamic schema; D-29 adds a local evidence report. The second module demonstrates architectural reuse, not external clinical validation. D-22 still accepts the ensemble's lack of a demonstrated accuracy win without retuning it. External-cohort validation, real hardware, and clinical readiness remain explicitly out of scope.
 
 | Criterion | Target | Evidence |
 |---|---|---|
@@ -87,6 +88,8 @@ A working, honestly-benchmarked, explainable hybrid quantum-classical classifier
 | Explainability | SHAP output shown for a real prediction from both paradigms, using real clinical feature names (not PC1-style labels) — verified: `mean concave points`, `worst radius`, `worst perimeter`, `worst concave points` | Screenshot + live demo, `decisions.md` D-13 |
 | Label direction correct | Explicit test confirms sklearn's 0=malignant/1=benign convention is respected end-to-end | `decisions.md` D-15 — this is a silent-failure risk, verify, don't assume |
 | Web app | Fully working live demo matching the design system in `architecture.md` §6, not a mockup or hardcoded screen | Live at judging, rehearsed with real (non-hardcoded) inputs |
+| Multi-disease scalability | Two modules with separate labels/schemas/model bundles; no universal-diagnosis claim | Disease selector, `/diseases`, module-specific `/predict` and `/explain`, D-28 |
+| Evidence report | Real outputs, evidence boundary, citations, limitations, and no cloud data transfer | `/report`; downloadable HTML and Print/Save-PDF UI, D-29 |
 | Reproducibility | One-command Docker setup works on a machine that hasn't seen the repo before | Tested by a teammate who didn't write the code |
 | Honesty | Team can answer "why not just classical ML" without overclaiming | Rehearsed answer, see `decisions.md` D-07 |
 

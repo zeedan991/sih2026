@@ -1,6 +1,6 @@
 # Q-TRACE
 
-Q-TRACE is a hybrid quantum-classical early disease signal analysis prototype for Smart India Hackathon problem statement SIH26139. It compares a six-member quantum ensemble (four VQCs and two quantum-kernel SVMs) with classical baselines on the Wisconsin Breast Cancer dataset.
+Q-TRACE is a hybrid quantum-classical early disease signal analysis platform for Smart India Hackathon problem statement SIH26139. It now demonstrates the same complete workflow on two independently trained modules: Wisconsin breast-mass classification and UCI early-diabetes questionnaire screening. Each compares a six-member quantum ensemble (four VQCs and two quantum-kernel SVMs) with classical baselines.
 
 The project is a research prototype, not a medical device. It deliberately presents quantum and classical results side by side and does not claim that quantum ML beats classical ML on raw accuracy.
 
@@ -32,7 +32,7 @@ python -m pip install -r requirements.txt
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open `http://127.0.0.1:8000/` for the judge-facing interface. Model initialization runs in the background; `/health` reports `loading` until all four 100-epoch VQCs, both QSVMs, and the classical baselines are ready.
+Open `http://127.0.0.1:8000/` for the judge-facing interface. Model initialization runs in the background; `/health` reports `loading` until both disease modules are ready (12 quantum members and 16 classical fits in total).
 
 Run the internal Streamlit console in a second PowerShell window:
 
@@ -45,12 +45,14 @@ The Streamlit application is an API client only. It does not train a second copy
 
 ## API contract
 
-- `GET /health` — runtime readiness, selected feature names, and actual training configuration.
-- `GET /patients` — held-out WBCD records for a reproducible demo.
-- `POST /ingest` — validate and order one exact named 30-feature record (used by CSV upload), with observed-range warnings.
+- `GET /health` — runtime readiness, loaded modules, selected feature names, and actual training configuration.
+- `GET /diseases` — disease registry, dataset attribution/license, labels, schemas, and observed ranges.
+- `GET /patients?disease_id=...` — held-out records for a reproducible module-specific demo.
+- `POST /ingest` — validate and order one exact named record for the selected disease, with observed-range warnings.
 - `POST /predict` — always returns the six-model `quantum` result plus both `classical.full_feature` and `classical.same_4_feature` results.
 - `POST /explain` — returns attribution only for quantum, classical full-feature, or classical same-four views. Quantum defaults to `vqc_fast`; `allow_slow=true` explicitly enables the slower full ensemble. This response never contains a second confidence or probability.
-- `GET /baselines` and `GET /metrics` — benchmark/debug information used by the Streamlit console.
+- `POST /report` — returns a local, deterministic evidence report; the judge UI downloads HTML or opens Print/Save-PDF. No hosted LLM or paid API is used.
+- `GET /baselines` and `GET /metrics` — module-specific benchmark/debug information used by the Streamlit console.
 
 The live default uses seed 42, a **20-row quantum training pool**, and 100 epochs per VQC; classical models use all 455 training rows. The saved three-seed quantum benchmark uses a **200-row pool**. Both UIs disclose the live configuration. These are different experiments: a live prediction is not a reproduction of the saved benchmark, and matching four input features does not also match training sample counts. Keep those qualifications in any presentation.
 
@@ -58,7 +60,11 @@ The live settings are identified by `artifacts/models/runtime_manifest.json`. St
 
 Inference accepts one prediction or explanation at a time. A competing request gets HTTP 429 with `Retry-After`; wait and retry manually. Request bodies over 16 KiB receive HTTP 413. The API is a single-process research demo, not a public clinical service.
 
-The four selected clinical features on the fixed split are `mean concave points`, `worst radius`, `worst perimeter`, and `worst concave points`.
+The fixed-split WBCD features are `mean concave points`, `worst radius`, `worst perimeter`, and `worst concave points`. The early-diabetes module selects `gender`, `polyuria`, `polydipsia`, and `partial paresis`. These are source columns, never PCA labels.
+
+The UCI diabetes benchmark is bundled unchanged under CC BY 4.0 and cited in `backend/data/datasets/README.md`. It has 520 questionnaire records from a single hospital study and can show unusually high accuracy because several symptoms strongly overlap the target. This is a scalability demonstration, not proof of pre-symptomatic detection, Indian-population validity, fairness, or clinical readiness.
+
+Its retained three-seed six-model ensemble measured 83.01% mean accuracy (76.92–92.31%), 81.25% mean condition sensitivity, and 85.83% mean specificity under the intentionally small 20-row quantum training budget. Full-feature classical models measured 90.06–95.51% mean accuracy. These non-superiority and variability findings are intentional parts of the evidence record, not numbers to hide; see `artifacts/evaluation/early_diabetes_three_seed.md`.
 
 ## SIH26139 requirement coverage
 
@@ -90,7 +96,7 @@ The clinical-workspace redesign was verified on 2026-09-02 with 66 passing tests
 
 The September 2 pre-push review increased the suite to **77 passing tests on both Windows and Linux**, verified the real fast/full explanation flows, fixed stale dashboard state and bounded expensive requests, and cleaned generated caches. See [the pre-push review](artifacts/integration/prepush_review_2026-09-02.md), including its security-review limitations at that time.
 
-The SIH26139 evidence closure on 2026-09-04 produced **87 passing tests**, a separately passing 20-epoch VQC cost-decrease regression, complete malignant-positive classical reports, fold-isolated five-fold evidence, classical SHAP/LIME, a named runtime manifest, and a browser walkthrough of CSV ingestion and all fast/classical attribution scopes. See [the completion record](artifacts/integration/phase7_completion_2026-09-04.md). Docker Desktop itself failed to start during this final run because its Windows host could not recreate a local Unix-socket reparse point; the app was therefore reverified through the pinned local Python runtime. This host failure did not change project files, and no factory reset was performed.
+The SIH26139 evidence closure on 2026-09-04 now produces **93 passing tests**, including a separately passing 20-epoch VQC cost-decrease regression, complete disease-oriented classical reports, fold-isolated five-fold breast-oncology evidence, three-seed evidence for both modules, classical and quantum SHAP/LIME, a named runtime manifest, and browser walkthroughs. See [the earlier Phase 7 completion record](artifacts/integration/phase7_completion_2026-09-04.md) and the current diabetes evidence under `artifacts/evaluation/`. Docker Desktop itself failed to start during the earlier final run because its Windows host could not recreate a local Unix-socket reparse point; the app was therefore reverified through the pinned local Python runtime. This host failure did not change project files, and no factory reset was performed.
 
 ## Containers
 

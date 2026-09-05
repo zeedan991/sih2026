@@ -268,20 +268,32 @@ A controlled real-model Phase 3 verification (seed 42, four VQCs at 100 epochs, 
 
 **Forward-compatibility note:** `sklearn.svm.SVC(kernel="precomputed", probability=True)` (§3.4, §3.5) raises a `FutureWarning` on the pinned scikit-learn 1.9.0 — the `probability` parameter is deprecated and scheduled for removal in 1.11, in favor of wrapping with `CalibratedClassifierCV`. It still works correctly on the pinned version (verified), so this isn't an active bug — but don't casually run `pip install --upgrade scikit-learn` mid-project without checking whether this has been removed yet. If you do upgrade past 1.11, switch to `CalibratedClassifierCV(SVC(kernel="precomputed"), ensemble=False)` for probability outputs.
 
+### 3.8 Disease-module registry and local evidence synthesis
+
+`backend/data/diseases.py` is the module boundary. A disease definition supplies its ID, cautious class labels, dataset citation/license, raw loader, preprocessing entry point, feature kinds, and display metadata. The runtime builds a complete `DiseaseRuntimeBundle` for every definition: fitted preprocessing, eight classical fits, a six-member quantum ensemble, quantum/classical explainers, and the raw benchmark rows used only for the held-out catalog and range checks. Requests choose one `disease_id`; arrays and labels from different modules never mix.
+
+The bundled modules are WBCD breast-mass classification (569 rows, 30 continuous measurements) and UCI Early Stage Diabetes Risk Prediction (520 rows, age plus 15 encoded questionnaire/demographic fields, CC BY 4.0). The diabetes CSV is stored unchanged with a SHA-256 regression and citation. Its UCI `Positive` class is explicit class 0 and `Negative` is class 1, separate from WBCD's `0=malignant, 1=benign` mapper. Both retain `y` and `y_pm1` independently and fit all transforms after splitting. The fixed seed-42 diabetes selection is `gender`, `polyuria`, `polydipsia`, and `partial paresis`; these are real source variables, not PCA components.
+
+The retained diabetes three-seed run (100 VQC epochs, 20-row quantum pools, full held-out test splits) measured **83.01% mean ensemble accuracy (76.92–92.31%), 81.25% condition sensitivity, and 85.83% specificity**. Full-feature classical means ranged from 90.06% to 95.51%; same-four classical means were 85.58–86.54%. One VQC was unstable (58.01% mean; 39.42–69.23%) and received near-zero OOB weight on its worst run. This is a scalability result and an honest model-instability demonstration, not a quantum-superiority or clinical-validity claim. Exact values are retained in `artifacts/evaluation/early_diabetes_three_seed.json`.
+
+`/report` is deterministic evidence synthesis, not a generative medical assistant. It is produced from the literal `/predict` objects and measured held-out metrics, then augmented with configuration, citations, limitations, selected raw values, and a small sex/gender subgroup audit for the questionnaire dataset. The browser converts this structured response to a self-contained HTML document and exposes Print/Save-PDF. No external model, API key, network call, patient storage, diagnosis, prescription, or personalized care advice is involved (D-28/D-29).
+
 ---
 
 ## 4. API contract (FastAPI)
 
 | Endpoint | Method | Input | Output |
 |---|---|---|---|
-| `/health` | GET | — | `{status, models_loaded, quantum_members, classical_models, selected_features, runtime_configuration: {configuration_id, manifest, loading_mode, quantum_device, seed, vqc_epochs, quantum_training_limit, classical_training_rows}, error?}` — identifies the live manifest and distinguishes it from the separate saved benchmark. |
-| `/ingest` | POST | `{record: {clinical_feature_name: float, ...}}` (exactly the named 30-feature WBCD schema) | `{feature_names, features, warnings}` — orders named input safely and flags values outside the benchmark's observed ranges before `/predict`; warnings are not clinical validity decisions. |
-| `/predict` | POST | `{features: float[30]}` | `{quantum: {label, confidence, per_model}, classical: {full_feature: {...}, same_4_feature: {...}}}` |
-| `/explain` | POST | `{features: float[30], model: "quantum"\|"classical_full_feature"\|"classical_same_4_feature", allow_slow: bool = false}` | `{feature_names, shap_values, lime_values, directions, top_features, scope}` — attribution only, never a standalone confidence/probability (D-23). Quantum defaults to `vqc_fast`; `allow_slow=true` selects `full_ensemble`. Classical scopes explain the corresponding Logistic Regression comparison. All names are real clinical columns. |
-| `/baselines` | GET | — | Live single-split malignant-focused metrics (accuracy, sensitivity, specificity, malignant precision/F1, confusion counts, ROC-AUC) plus measured fit/predict time for four models in both feature configurations. |
-| `/metrics` | GET | — | Saved Phase 2 quantum results plus retained complete three-seed classical and leakage-safe five-fold hybrid generalization evidence. |
+| `/health` | GET | — | Runtime state plus all loaded disease modules and the identified training configuration. Twelve quantum members and sixteen classical fits are present when both bundled modules are ready. |
+| `/diseases` | GET | — | Installed module registry: disease IDs, cautious class labels, dataset source/license, full and selected real feature names, feature kinds, and observed benchmark ranges. |
+| `/ingest` | POST | `{disease_id, record: {clinical_feature_name: float, ...}}` | Orders the selected module's exact named schema and returns range warnings. Diabetes questionnaire fields enforce binary `0/1` encoding; warnings are not clinical validity decisions. |
+| `/predict` | POST | `{disease_id, features}` (30 WBCD or 16 diabetes values) | `{disease_id, class_labels, quantum: {label, confidence, class_probabilities, per_model}, classical: {full_feature: {...}, same_4_feature: {...}}, agreement}`. Both paradigms and both classical views remain mandatory (D-12/D-14). |
+| `/explain` | POST | `{disease_id, features, model: "quantum"\|"classical_full_feature"\|"classical_same_4_feature", allow_slow: bool = false}` | `{disease_id, feature_names, shap_values, lime_values, directions, top_features, scope}` — attribution only, never a standalone confidence/probability (D-23). Quantum defaults to `vqc_fast`; `allow_slow=true` selects `full_ensemble`. All names are real module columns. |
+| `/report` | POST | `{disease_id, features}` | Structured local evidence report with the full prediction contract, selected raw inputs, six-member audit, held-out evidence, configuration, dataset attribution, limitations, and subgroup audit where available. The frontend exports HTML or Print/Save-PDF; no hosted LLM or server persistence (D-29). |
+| `/baselines` | GET | `disease_id` query | Live single-split condition-positive metrics and timing for four classical models in both feature configurations. |
+| `/metrics` | GET | `disease_id` query | WBCD returns retained Phase 2/three-seed/five-fold evidence; diabetes returns its identified live-split scalability evidence with an explicit non-generalization warning. |
 
-`quantum` and `classical` are always both present and fully populated (D-12). `classical` now has two sub-objects, not one — both always populated too (D-14).
+`quantum` and `classical` are always both present and fully populated (D-12). `classical` has two sub-objects, not one — both always populated too (D-14). `disease_id` selects an independently trained module; it never changes labels on a shared universal classifier (D-28).
 
 **Request safeguards (2026-09-02):** JSON bodies are limited to 16 KiB before parsing, including chunked requests (HTTP 413 if exceeded). One prediction or explanation runs per API process; competing inference requests receive HTTP 429 with `Retry-After: 2` instead of waiting behind a long explanation. Health, patient catalog, and benchmark metadata remain accessible. Both clients display the error and allow a manual retry; successful response shapes above are unchanged. This is a local research demo, not an authenticated public clinical service.
 
@@ -307,7 +319,10 @@ quantum-disease-detection/
 │   ├── explain/
 │   │   └── shap_lime.py          # feature_names always real names now
 │   ├── data/
-│   │   └── pipeline.py           # SelectKBest, not PCA (§3.2); keeps y AND y_pm1 separately
+│   │   ├── pipeline.py           # WBCD SelectKBest path; keeps y AND y_pm1 separately
+│   │   ├── diabetes.py           # UCI questionnaire encoding + identical leakage-safe path
+│   │   ├── diseases.py           # module registry, labels, schemas, citations
+│   │   └── datasets/             # unchanged cited CC BY diabetes CSV
 │   └── weights/
 ├── frontend/
 │   ├── index.html  styles.css  app.js
@@ -342,6 +357,8 @@ Because §3.2 selects 4 *named* original features instead of extracting 4 abstra
 **One number on screen, always (D-23).** The fast VQC-only default explanation and the full 6-model ensemble prediction can legitimately disagree on confidence — they're different model subsets, verified during Phase 3 to differ by as much as 13 points on the same patient. The frontend must never show both: the dial's confidence, already returned by /predict, is the only number displayed; the explanation panel supplies feature-attribution bars underneath it and nothing else. Two different-looking probabilities for one patient reads as a bug to a judge in a live demo, regardless of how correct it is underneath.
 
 **Evidence qualification (September 2):** The retained Phase 3 report measures the approximately 13-point same-patient spread between **QSVM-only and full ensemble**, not VQC-only and full ensemble; the quoted VQC case used another patient. See the audit note under D-23. The attribution-only contract is unchanged. "One number" here means one verdict for each displayed model result, with no extra explanation-scope verdict; the required quantum and classical dials both remain visible.
+
+**Disease modules and reports (September 4, D-28/D-29):** A compact disease selector changes the complete schema, model bundle, labels, catalog, evidence, and explanation context together. Results never mix modules. After prediction, a report panel presents a constrained local evidence summary and offers downloadable HTML plus the browser's Print/Save-PDF path. It preserves the equal dials and disagreement banner, identifies the dataset and limitations, and never markets the output as a diagnosis or personal risk score.
 
 ### 6.4 Color tokens
 

@@ -79,8 +79,10 @@ Build order deliberately front-loads the highest-risk, least-familiar piece (the
 
 **Approved and implemented September 3 (D-27):** malignant sensitivity/specificity, clinically oriented confusion matrices and ROC-AUC; complete three-seed classical metrics for both feature views; leakage-safe five-fold validation with preprocessing refitted inside each fold; attribution-only classical SHAP/LIME scopes; exact named 30-feature CSV ingestion; measured classical fit/predict timings; and a checked-in live runtime manifest. These additions close the September 2 core evidence gaps without changing the model family or claiming quantum superiority.
 
+**Approved September 4 (D-28/D-29):** demonstrate platform scalability with a second, independently trained UCI early-diabetes module using the same complete hybrid workflow, and add a constrained local evidence report with HTML/Print-to-PDF export. This changes the earlier no-bonus status for these two additions only; multimodal imaging/genomics, noisy simulation, and real hardware remain future work.
+
 - First priority for any remaining time: polish, bug-fix, and rehearse the core again. A polished Must-have beats a half-built Should-have.
-- **No bonus build is currently approved.** Preserve the known-good build and rehearse. Multimodal data, noisy simulation, and hardware runs remain future work.
+- Preserve the known-good breast-oncology evidence while validating the approved diabetes/report additions. Multimodal data, noisy simulation, and hardware runs remain future work.
 - Prepare the docx-based submission material and the pitch deck from the same verified numbers used throughout — no new claims introduced at this stage that weren't tested earlier.
 - Confirm the required presentation template, registration, venue, and submission format with the organizer. `Project_Blueprint_SIH26139.docx` is historical source material, not a submission-ready or current evidence document. Use the checked-in benchmark reports and current limitations when preparing slides.
 
