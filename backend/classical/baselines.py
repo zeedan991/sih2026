@@ -1,14 +1,14 @@
 """Deterministic classical baselines for both required feature views.
 
 The full-feature configuration is the realistic classical benchmark and uses
-all 30 standardized WBCD features.  The same-4-feature configuration uses the
+all standardized dataset features.  The same-4-feature configuration uses the
 exact four standardized columns selected for the quantum path, before the
 additional inward ``(0, pi)`` quantum-only scaling. Reporting both is required by
 decision D-14.
 
-Clinical metrics explicitly treat class ``0`` (malignant) as positive.  This
-keeps sensitivity and false-negative counts aligned with the disease-detection
-question rather than sklearn's numerically larger benign class.
+Clinical metrics explicitly treat class ``0`` (condition present) as positive.
+For the original WBCD module that is malignant; each additional disease module
+supplies its own clinically accurate class name.
 """
 
 from __future__ import annotations
@@ -55,13 +55,14 @@ POSITIVE_CLASS_NAME: Final[str] = "malignant"
 
 @dataclass(frozen=True, slots=True)
 class ClassificationMetrics:
-    """Disease-oriented metrics with malignant (sklearn label 0) as positive."""
+    """Disease-oriented metrics with class 0 as the concerning condition."""
 
     accuracy: float
     precision: float
     recall: float
     f1: float
     malignant_sensitivity: float
+    condition_sensitivity: float
     specificity: float
     confusion_matrix: dict[str, int]
     roc_auc: float | None
@@ -130,8 +131,14 @@ def evaluate_classification(
     predictions: NDArray[np.integer],
     *,
     malignant_scores: NDArray[np.floating] | None = None,
+    positive_class_name: str = POSITIVE_CLASS_NAME,
 ) -> ClassificationMetrics:
-    """Evaluate original labels with malignant as the clinical positive class."""
+    """Evaluate binary labels with class 0 as the clinical positive class.
+
+    ``malignant_scores`` retains its historic keyword for backwards
+    compatibility; for non-oncology modules it means the class-zero condition
+    score.
+    """
 
     y_true_array = np.asarray(y_true, dtype=np.int64)
     prediction_array = np.asarray(predictions, dtype=np.int64)
@@ -184,6 +191,7 @@ def evaluate_classification(
             )
         ),
         malignant_sensitivity=sensitivity,
+        condition_sensitivity=sensitivity,
         specificity=float(
             recall_score(y_true_array, prediction_array, pos_label=1, zero_division=0)
         ),
@@ -194,6 +202,7 @@ def evaluate_classification(
             "true_negative": true_negative,
         },
         roc_auc=roc_auc,
+        positive_class_name=positive_class_name,
     )
 
 
@@ -201,12 +210,12 @@ def malignant_score(
     estimator: ClassifierMixin,
     features: NDArray[np.float64],
 ) -> NDArray[np.float64]:
-    """Return a continuous score where larger means more malignant."""
+    """Return a continuous score where larger means class-zero/condition present."""
 
     classes = np.asarray(estimator.classes_, dtype=np.int64)
     matches = np.flatnonzero(classes == 0)
     if matches.size != 1:
-        raise RuntimeError("estimator must contain malignant class 0")
+        raise RuntimeError("estimator must contain condition-present class 0")
     if hasattr(estimator, "predict_proba"):
         probabilities = np.asarray(estimator.predict_proba(features), dtype=float)
         return probabilities[:, int(matches[0])]
@@ -261,7 +270,10 @@ def train_evaluate_baselines(
                 estimator=estimator,
                 predictions=predictions,
                 metrics=evaluate_classification(
-                    data.y_test, predictions, malignant_scores=scores
+                    data.y_test,
+                    predictions,
+                    malignant_scores=scores,
+                    positive_class_name=str(getattr(data, "target_names", [POSITIVE_CLASS_NAME])[0]),
                 ),
                 fit_seconds=fit_seconds,
                 predict_seconds=predict_seconds,

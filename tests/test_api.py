@@ -43,7 +43,7 @@ class StubRuntime:
             "quantum_members": 6,
             "classical_models": 8,
             "runtime_configuration": {
-                "configuration_id": "qtrace-wbcd-s42-e100-q20-v1",
+                "configuration_id": "qtrace-multidisease-s42-e100-q20-v1",
                 "manifest": "artifacts/models/runtime_manifest.json",
                 "loading_mode": "deterministic_refit_from_manifest",
                 "quantum_device": "lightning.qubit",
@@ -479,5 +479,5 @@ def test_health_reports_actual_runtime_configuration_before_training() -> None:
     assert config["vqc_epochs"] == runtime.vqc_epochs
     assert config["quantum_training_limit"] == runtime.training_limit
     assert config["classical_training_rows"] == 0
-    assert config["configuration_id"] == "qtrace-wbcd-s42-e100-q20-v1"
+    assert config["configuration_id"] == "qtrace-multidisease-s42-e100-q20-v1"
     assert config["loading_mode"] == "deterministic_refit_from_manifest"

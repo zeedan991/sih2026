@@ -1,8 +1,23 @@
 {
-  "schema_version": 1,
-  "configuration_id": "qtrace-wbcd-s42-e100-q20-v1",
-  "dataset": "sklearn Wisconsin Breast Cancer Diagnostic",
+  "schema_version": 2,
+  "configuration_id": "qtrace-multidisease-s42-e100-q20-v1",
+  "dataset": "sklearn Wisconsin Breast Cancer Diagnostic (default module)",
   "dataset_rows": 569,
+  "datasets": [
+    {
+      "disease_id": "breast_cancer",
+      "name": "sklearn Wisconsin Breast Cancer Diagnostic",
+      "rows": 569,
+      "features": 30
+    },
+    {
+      "disease_id": "early_diabetes",
+      "name": "UCI Early Stage Diabetes Risk Prediction",
+      "rows": 520,
+      "features": 16,
+      "license": "CC BY 4.0"
+    }
+  ],
   "split_seed": 42,
   "test_size": 0.2,
   "vqc_epochs": 100,
@@ -19,5 +34,5 @@
   ],
   "preprocessing": "median imputation -> standard scaling -> SelectKBest(f_classif,k=4) -> inward quantum scaling",
   "loading_mode": "deterministic_refit_from_manifest",
-  "note": "This manifest identifies the live demonstration configuration. It is not the separate 200-row three-seed benchmark and does not contain patient data."
+  "note": "This manifest identifies both independently trained live disease modules. It is not the separate WBCD 200-row three-seed benchmark and does not contain patient data."
 }

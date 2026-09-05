@@ -1,0 +1,841 @@
+{
+  "schema_version": 1,
+  "dataset": "UCI Early Stage Diabetes Risk Prediction",
+  "source": "https://doi.org/10.24432/C5VG8H",
+  "license": "CC BY 4.0",
+  "seeds": [
+    42,
+    123,
+    2026
+  ],
+  "configuration": {
+    "split": "stratified 80/20",
+    "vqc_epochs": 100,
+    "quantum_training_limit": 20,
+    "quantum_device": "lightning.qubit",
+    "preprocessing": "train-only median -> standard -> SelectKBest(k=4) -> inward quantum range"
+  },
+  "runs": [
+    {
+      "seed": 42,
+      "selected_feature_names": [
+        "gender",
+        "polyuria",
+        "polydipsia",
+        "partial paresis"
+      ],
+      "ensemble_metrics": {
+        "accuracy": 0.9230769230769231,
+        "precision": 0.9117647058823529,
+        "recall": 0.96875,
+        "f1": 0.9393939393939394,
+        "malignant_sensitivity": 0.96875,
+        "condition_sensitivity": 0.96875,
+        "specificity": 0.85,
+        "confusion_matrix": {
+          "true_positive": 62,
+          "false_negative": 2,
+          "false_positive": 6,
+          "true_negative": 34
+        },
+        "roc_auc": 0.9585937499999999,
+        "positive_label": 0,
+        "positive_class_name": "positive screening signal"
+      },
+      "best_single_name": "qsvm_angle_4q",
+      "best_single_accuracy": 0.8942307692307693,
+      "members": [
+        {
+          "name": "vqc_4q_3l_cnot",
+          "paradigm": "VQC",
+          "accuracy": 0.6923076923076923,
+          "oob_mse": 0.1868426831238552,
+          "weight": 0.12441706223248301,
+          "oob_size": 7
+        },
+        {
+          "name": "vqc_3q_2l_cnot",
+          "paradigm": "VQC",
+          "accuracy": 0.8173076923076923,
+          "oob_mse": 0.22302026018493248,
+          "weight": 0.1042345557064118,
+          "oob_size": 6
+        },
+        {
+          "name": "vqc_4q_2l_cz",
+          "paradigm": "VQC",
+          "accuracy": 0.8365384615384616,
+          "oob_mse": 0.20772744322615028,
+          "weight": 0.11190826485355963,
+          "oob_size": 8
+        },
+        {
+          "name": "vqc_4q_3l_cz_reversed",
+          "paradigm": "VQC",
+          "accuracy": 0.8076923076923077,
+          "oob_mse": 0.11025992502759695,
+          "weight": 0.21083288173909473,
+          "oob_size": 9
+        },
+        {
+          "name": "qsvm_angle_4q",
+          "paradigm": "QSVM",
+          "accuracy": 0.8942307692307693,
+          "oob_mse": 0.11470997281988421,
+          "weight": 0.20265385094638594,
+          "oob_size": 8
+        },
+        {
+          "name": "qsvm_amplitude_2q",
+          "paradigm": "QSVM",
+          "accuracy": 0.8942307692307693,
+          "oob_mse": 0.09451554317529355,
+          "weight": 0.24595338452206486,
+          "oob_size": 6
+        }
+      ],
+      "classical": {
+        "full_feature": {
+          "logistic_regression": {
+            "accuracy": 0.9711538461538461,
+            "precision": 0.9841269841269841,
+            "recall": 0.96875,
+            "f1": 0.9763779527559056,
+            "malignant_sensitivity": 0.96875,
+            "condition_sensitivity": 0.96875,
+            "specificity": 0.975,
+            "confusion_matrix": {
+              "true_positive": 62,
+              "false_negative": 2,
+              "false_positive": 1,
+              "true_negative": 39
+            },
+            "roc_auc": 0.990625,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "random_forest": {
+            "accuracy": 0.9807692307692307,
+            "precision": 0.984375,
+            "recall": 0.984375,
+            "f1": 0.984375,
+            "malignant_sensitivity": 0.984375,
+            "condition_sensitivity": 0.984375,
+            "specificity": 0.975,
+            "confusion_matrix": {
+              "true_positive": 63,
+              "false_negative": 1,
+              "false_positive": 1,
+              "true_negative": 39
+            },
+            "roc_auc": 0.998046875,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "xgboost": {
+            "accuracy": 0.9615384615384616,
+            "precision": 0.9838709677419355,
+            "recall": 0.953125,
+            "f1": 0.9682539682539683,
+            "malignant_sensitivity": 0.953125,
+            "condition_sensitivity": 0.953125,
+            "specificity": 0.975,
+            "confusion_matrix": {
+              "true_positive": 61,
+              "false_negative": 3,
+              "false_positive": 1,
+              "true_negative": 39
+            },
+            "roc_auc": 0.9933593749999999,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "svm": {
+            "accuracy": 0.9807692307692307,
+            "precision": 0.984375,
+            "recall": 0.984375,
+            "f1": 0.984375,
+            "malignant_sensitivity": 0.984375,
+            "condition_sensitivity": 0.984375,
+            "specificity": 0.975,
+            "confusion_matrix": {
+              "true_positive": 63,
+              "false_negative": 1,
+              "false_positive": 1,
+              "true_negative": 39
+            },
+            "roc_auc": 0.99609375,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          }
+        },
+        "same_4_feature": {
+          "logistic_regression": {
+            "accuracy": 0.9230769230769231,
+            "precision": 0.9117647058823529,
+            "recall": 0.96875,
+            "f1": 0.9393939393939394,
+            "malignant_sensitivity": 0.96875,
+            "condition_sensitivity": 0.96875,
+            "specificity": 0.85,
+            "confusion_matrix": {
+              "true_positive": 62,
+              "false_negative": 2,
+              "false_positive": 6,
+              "true_negative": 34
+            },
+            "roc_auc": 0.97578125,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "random_forest": {
+            "accuracy": 0.8942307692307693,
+            "precision": 0.9076923076923077,
+            "recall": 0.921875,
+            "f1": 0.9147286821705426,
+            "malignant_sensitivity": 0.921875,
+            "condition_sensitivity": 0.921875,
+            "specificity": 0.85,
+            "confusion_matrix": {
+              "true_positive": 59,
+              "false_negative": 5,
+              "false_positive": 6,
+              "true_negative": 34
+            },
+            "roc_auc": 0.96796875,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "xgboost": {
+            "accuracy": 0.9230769230769231,
+            "precision": 0.9117647058823529,
+            "recall": 0.96875,
+            "f1": 0.9393939393939394,
+            "malignant_sensitivity": 0.96875,
+            "condition_sensitivity": 0.96875,
+            "specificity": 0.85,
+            "confusion_matrix": {
+              "true_positive": 62,
+              "false_negative": 2,
+              "false_positive": 6,
+              "true_negative": 34
+            },
+            "roc_auc": 0.9703125,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "svm": {
+            "accuracy": 0.9230769230769231,
+            "precision": 0.9117647058823529,
+            "recall": 0.96875,
+            "f1": 0.9393939393939394,
+            "malignant_sensitivity": 0.96875,
+            "condition_sensitivity": 0.96875,
+            "specificity": 0.85,
+            "confusion_matrix": {
+              "true_positive": 62,
+              "false_negative": 2,
+              "false_positive": 6,
+              "true_negative": 34
+            },
+            "roc_auc": 0.912890625,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          }
+        }
+      }
+    },
+    {
+      "seed": 123,
+      "selected_feature_names": [
+        "gender",
+        "polyuria",
+        "polydipsia",
+        "sudden weight loss"
+      ],
+      "ensemble_metrics": {
+        "accuracy": 0.7980769230769231,
+        "precision": 0.864406779661017,
+        "recall": 0.796875,
+        "f1": 0.8292682926829268,
+        "malignant_sensitivity": 0.796875,
+        "condition_sensitivity": 0.796875,
+        "specificity": 0.8,
+        "confusion_matrix": {
+          "true_positive": 51,
+          "false_negative": 13,
+          "false_positive": 8,
+          "true_negative": 32
+        },
+        "roc_auc": 0.8964843750000001,
+        "positive_label": 0,
+        "positive_class_name": "positive screening signal"
+      },
+      "best_single_name": "qsvm_amplitude_2q",
+      "best_single_accuracy": 0.8557692307692307,
+      "members": [
+        {
+          "name": "vqc_4q_3l_cnot",
+          "paradigm": "VQC",
+          "accuracy": 0.6538461538461539,
+          "oob_mse": 0.5781775812051918,
+          "weight": 0.07952550508738912,
+          "oob_size": 3
+        },
+        {
+          "name": "vqc_3q_2l_cnot",
+          "paradigm": "VQC",
+          "accuracy": 0.7788461538461539,
+          "oob_mse": 0.22366708424511306,
+          "weight": 0.20557277943123375,
+          "oob_size": 6
+        },
+        {
+          "name": "vqc_4q_2l_cz",
+          "paradigm": "VQC",
+          "accuracy": 0.7980769230769231,
+          "oob_mse": 0.33512125323380143,
+          "weight": 0.13720366503723178,
+          "oob_size": 7
+        },
+        {
+          "name": "vqc_4q_3l_cz_reversed",
+          "paradigm": "VQC",
+          "accuracy": 0.7788461538461539,
+          "oob_mse": 0.24860765876514182,
+          "weight": 0.18494950800765442,
+          "oob_size": 7
+        },
+        {
+          "name": "qsvm_angle_4q",
+          "paradigm": "QSVM",
+          "accuracy": 0.7788461538461539,
+          "oob_mse": 0.23543011047297788,
+          "weight": 0.19530154440812392,
+          "oob_size": 6
+        },
+        {
+          "name": "qsvm_amplitude_2q",
+          "paradigm": "QSVM",
+          "accuracy": 0.8557692307692307,
+          "oob_mse": 0.23287193340332252,
+          "weight": 0.19744699802836693,
+          "oob_size": 7
+        }
+      ],
+      "classical": {
+        "full_feature": {
+          "logistic_regression": {
+            "accuracy": 0.8365384615384616,
+            "precision": 0.8852459016393442,
+            "recall": 0.84375,
+            "f1": 0.864,
+            "malignant_sensitivity": 0.84375,
+            "condition_sensitivity": 0.84375,
+            "specificity": 0.825,
+            "confusion_matrix": {
+              "true_positive": 54,
+              "false_negative": 10,
+              "false_positive": 7,
+              "true_negative": 33
+            },
+            "roc_auc": 0.9347656249999999,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "random_forest": {
+            "accuracy": 0.9326923076923077,
+            "precision": 0.9672131147540983,
+            "recall": 0.921875,
+            "f1": 0.944,
+            "malignant_sensitivity": 0.921875,
+            "condition_sensitivity": 0.921875,
+            "specificity": 0.95,
+            "confusion_matrix": {
+              "true_positive": 59,
+              "false_negative": 5,
+              "false_positive": 2,
+              "true_negative": 38
+            },
+            "roc_auc": 0.99296875,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "xgboost": {
+            "accuracy": 0.8846153846153846,
+            "precision": 0.9642857142857143,
+            "recall": 0.84375,
+            "f1": 0.9,
+            "malignant_sensitivity": 0.84375,
+            "condition_sensitivity": 0.84375,
+            "specificity": 0.95,
+            "confusion_matrix": {
+              "true_positive": 54,
+              "false_negative": 10,
+              "false_positive": 2,
+              "true_negative": 38
+            },
+            "roc_auc": 0.975,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "svm": {
+            "accuracy": 0.9423076923076923,
+            "precision": 0.9833333333333333,
+            "recall": 0.921875,
+            "f1": 0.9516129032258065,
+            "malignant_sensitivity": 0.921875,
+            "condition_sensitivity": 0.921875,
+            "specificity": 0.975,
+            "confusion_matrix": {
+              "true_positive": 59,
+              "false_negative": 5,
+              "false_positive": 1,
+              "true_negative": 39
+            },
+            "roc_auc": 0.990625,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          }
+        },
+        "same_4_feature": {
+          "logistic_regression": {
+            "accuracy": 0.8557692307692307,
+            "precision": 0.8769230769230769,
+            "recall": 0.890625,
+            "f1": 0.8837209302325582,
+            "malignant_sensitivity": 0.890625,
+            "condition_sensitivity": 0.890625,
+            "specificity": 0.8,
+            "confusion_matrix": {
+              "true_positive": 57,
+              "false_negative": 7,
+              "false_positive": 8,
+              "true_negative": 32
+            },
+            "roc_auc": 0.9140625,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "random_forest": {
+            "accuracy": 0.8557692307692307,
+            "precision": 0.8769230769230769,
+            "recall": 0.890625,
+            "f1": 0.8837209302325582,
+            "malignant_sensitivity": 0.890625,
+            "condition_sensitivity": 0.890625,
+            "specificity": 0.8,
+            "confusion_matrix": {
+              "true_positive": 57,
+              "false_negative": 7,
+              "false_positive": 8,
+              "true_negative": 32
+            },
+            "roc_auc": 0.9203125000000001,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "xgboost": {
+            "accuracy": 0.8557692307692307,
+            "precision": 0.8769230769230769,
+            "recall": 0.890625,
+            "f1": 0.8837209302325582,
+            "malignant_sensitivity": 0.890625,
+            "condition_sensitivity": 0.890625,
+            "specificity": 0.8,
+            "confusion_matrix": {
+              "true_positive": 57,
+              "false_negative": 7,
+              "false_positive": 8,
+              "true_negative": 32
+            },
+            "roc_auc": 0.9164062500000001,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "svm": {
+            "accuracy": 0.8557692307692307,
+            "precision": 0.8769230769230769,
+            "recall": 0.890625,
+            "f1": 0.8837209302325582,
+            "malignant_sensitivity": 0.890625,
+            "condition_sensitivity": 0.890625,
+            "specificity": 0.8,
+            "confusion_matrix": {
+              "true_positive": 57,
+              "false_negative": 7,
+              "false_positive": 8,
+              "true_negative": 32
+            },
+            "roc_auc": 0.9019531250000001,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          }
+        }
+      }
+    },
+    {
+      "seed": 2026,
+      "selected_feature_names": [
+        "gender",
+        "polyuria",
+        "polydipsia",
+        "partial paresis"
+      ],
+      "ensemble_metrics": {
+        "accuracy": 0.7692307692307693,
+        "precision": 0.9347826086956522,
+        "recall": 0.671875,
+        "f1": 0.7818181818181819,
+        "malignant_sensitivity": 0.671875,
+        "condition_sensitivity": 0.671875,
+        "specificity": 0.925,
+        "confusion_matrix": {
+          "true_positive": 43,
+          "false_negative": 21,
+          "false_positive": 3,
+          "true_negative": 37
+        },
+        "roc_auc": 0.909375,
+        "positive_label": 0,
+        "positive_class_name": "positive screening signal"
+      },
+      "best_single_name": "vqc_4q_2l_cz",
+      "best_single_accuracy": 0.8076923076923077,
+      "members": [
+        {
+          "name": "vqc_4q_3l_cnot",
+          "paradigm": "VQC",
+          "accuracy": 0.3942307692307692,
+          "oob_mse": 0.22223826533520993,
+          "weight": 7.188283324044381e-06,
+          "oob_size": 7
+        },
+        {
+          "name": "vqc_3q_2l_cnot",
+          "paradigm": "VQC",
+          "accuracy": 0.7692307692307693,
+          "oob_mse": 0.0022741230936300406,
+          "weight": 0.0007024736792605328,
+          "oob_size": 7
+        },
+        {
+          "name": "vqc_4q_2l_cz",
+          "paradigm": "VQC",
+          "accuracy": 0.8076923076923077,
+          "oob_mse": 0.009254785500634,
+          "weight": 0.00017261465612187363,
+          "oob_size": 6
+        },
+        {
+          "name": "vqc_4q_3l_cz_reversed",
+          "paradigm": "VQC",
+          "accuracy": 0.7692307692307693,
+          "oob_mse": 1.5989499549708859e-06,
+          "weight": 0.9991004482080414,
+          "oob_size": 6
+        },
+        {
+          "name": "qsvm_angle_4q",
+          "paradigm": "QSVM",
+          "accuracy": 0.7788461538461539,
+          "oob_mse": 0.20111298203202763,
+          "weight": 7.943354031811e-06,
+          "oob_size": 7
+        },
+        {
+          "name": "qsvm_amplitude_2q",
+          "paradigm": "QSVM",
+          "accuracy": 0.7788461538461539,
+          "oob_mse": 0.1711897304209808,
+          "weight": 9.33181922037685e-06,
+          "oob_size": 7
+        }
+      ],
+      "classical": {
+        "full_feature": {
+          "logistic_regression": {
+            "accuracy": 0.8942307692307693,
+            "precision": 0.9076923076923077,
+            "recall": 0.921875,
+            "f1": 0.9147286821705426,
+            "malignant_sensitivity": 0.921875,
+            "condition_sensitivity": 0.921875,
+            "specificity": 0.85,
+            "confusion_matrix": {
+              "true_positive": 59,
+              "false_negative": 5,
+              "false_positive": 6,
+              "true_negative": 34
+            },
+            "roc_auc": 0.957421875,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "random_forest": {
+            "accuracy": 0.9423076923076923,
+            "precision": 0.9393939393939394,
+            "recall": 0.96875,
+            "f1": 0.9538461538461539,
+            "malignant_sensitivity": 0.96875,
+            "condition_sensitivity": 0.96875,
+            "specificity": 0.9,
+            "confusion_matrix": {
+              "true_positive": 62,
+              "false_negative": 2,
+              "false_positive": 4,
+              "true_negative": 36
+            },
+            "roc_auc": 0.991796875,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "xgboost": {
+            "accuracy": 0.9423076923076923,
+            "precision": 0.9393939393939394,
+            "recall": 0.96875,
+            "f1": 0.9538461538461539,
+            "malignant_sensitivity": 0.96875,
+            "condition_sensitivity": 0.96875,
+            "specificity": 0.9,
+            "confusion_matrix": {
+              "true_positive": 62,
+              "false_negative": 2,
+              "false_positive": 4,
+              "true_negative": 36
+            },
+            "roc_auc": 0.9851562500000001,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "svm": {
+            "accuracy": 0.9423076923076923,
+            "precision": 0.9393939393939394,
+            "recall": 0.96875,
+            "f1": 0.9538461538461539,
+            "malignant_sensitivity": 0.96875,
+            "condition_sensitivity": 0.96875,
+            "specificity": 0.9,
+            "confusion_matrix": {
+              "true_positive": 62,
+              "false_negative": 2,
+              "false_positive": 4,
+              "true_negative": 36
+            },
+            "roc_auc": 0.987890625,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          }
+        },
+        "same_4_feature": {
+          "logistic_regression": {
+            "accuracy": 0.8173076923076923,
+            "precision": 0.8,
+            "recall": 0.9375,
+            "f1": 0.8633093525179856,
+            "malignant_sensitivity": 0.9375,
+            "condition_sensitivity": 0.9375,
+            "specificity": 0.625,
+            "confusion_matrix": {
+              "true_positive": 60,
+              "false_negative": 4,
+              "false_positive": 15,
+              "true_negative": 25
+            },
+            "roc_auc": 0.9078125,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "random_forest": {
+            "accuracy": 0.8173076923076923,
+            "precision": 0.8,
+            "recall": 0.9375,
+            "f1": 0.8633093525179856,
+            "malignant_sensitivity": 0.9375,
+            "condition_sensitivity": 0.9375,
+            "specificity": 0.625,
+            "confusion_matrix": {
+              "true_positive": 60,
+              "false_negative": 4,
+              "false_positive": 15,
+              "true_negative": 25
+            },
+            "roc_auc": 0.925390625,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "xgboost": {
+            "accuracy": 0.8173076923076923,
+            "precision": 0.8,
+            "recall": 0.9375,
+            "f1": 0.8633093525179856,
+            "malignant_sensitivity": 0.9375,
+            "condition_sensitivity": 0.9375,
+            "specificity": 0.625,
+            "confusion_matrix": {
+              "true_positive": 60,
+              "false_negative": 4,
+              "false_positive": 15,
+              "true_negative": 25
+            },
+            "roc_auc": 0.925390625,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          },
+          "svm": {
+            "accuracy": 0.8173076923076923,
+            "precision": 0.8,
+            "recall": 0.9375,
+            "f1": 0.8633093525179856,
+            "malignant_sensitivity": 0.9375,
+            "condition_sensitivity": 0.9375,
+            "specificity": 0.625,
+            "confusion_matrix": {
+              "true_positive": 60,
+              "false_negative": 4,
+              "false_positive": 15,
+              "true_negative": 25
+            },
+            "roc_auc": 0.91796875,
+            "positive_label": 0,
+            "positive_class_name": "positive screening signal"
+          }
+        }
+      }
+    }
+  ],
+  "summaries": {
+    "ensemble_accuracy": {
+      "mean": 0.8301282051282052,
+      "min": 0.7692307692307693,
+      "max": 0.9230769230769231
+    },
+    "ensemble_condition_sensitivity": {
+      "mean": 0.8125,
+      "min": 0.671875,
+      "max": 0.96875
+    },
+    "ensemble_specificity": {
+      "mean": 0.8583333333333334,
+      "min": 0.8,
+      "max": 0.925
+    },
+    "members": {
+      "vqc_4q_3l_cnot": {
+        "accuracy": {
+          "mean": 0.5801282051282051,
+          "min": 0.3942307692307692,
+          "max": 0.6923076923076923
+        },
+        "weight": {
+          "mean": 0.06798325186773206,
+          "min": 7.188283324044381e-06,
+          "max": 0.12441706223248301
+        }
+      },
+      "vqc_3q_2l_cnot": {
+        "accuracy": {
+          "mean": 0.7884615384615384,
+          "min": 0.7692307692307693,
+          "max": 0.8173076923076923
+        },
+        "weight": {
+          "mean": 0.10350326960563536,
+          "min": 0.0007024736792605328,
+          "max": 0.20557277943123375
+        }
+      },
+      "vqc_4q_2l_cz": {
+        "accuracy": {
+          "mean": 0.8141025641025641,
+          "min": 0.7980769230769231,
+          "max": 0.8365384615384616
+        },
+        "weight": {
+          "mean": 0.08309484818230443,
+          "min": 0.00017261465612187363,
+          "max": 0.13720366503723178
+        }
+      },
+      "vqc_4q_3l_cz_reversed": {
+        "accuracy": {
+          "mean": 0.7852564102564102,
+          "min": 0.7692307692307693,
+          "max": 0.8076923076923077
+        },
+        "weight": {
+          "mean": 0.4649609459849302,
+          "min": 0.18494950800765442,
+          "max": 0.9991004482080414
+        }
+      },
+      "qsvm_angle_4q": {
+        "accuracy": {
+          "mean": 0.8173076923076923,
+          "min": 0.7788461538461539,
+          "max": 0.8942307692307693
+        },
+        "weight": {
+          "mean": 0.13265444623618056,
+          "min": 7.943354031811e-06,
+          "max": 0.20265385094638594
+        }
+      },
+      "qsvm_amplitude_2q": {
+        "accuracy": {
+          "mean": 0.842948717948718,
+          "min": 0.7788461538461539,
+          "max": 0.8942307692307693
+        },
+        "weight": {
+          "mean": 0.14780323812321738,
+          "min": 9.33181922037685e-06,
+          "max": 0.24595338452206486
+        }
+      }
+    },
+    "classical_accuracy": {
+      "full_feature/logistic_regression": {
+        "mean": 0.9006410256410257,
+        "min": 0.8365384615384616,
+        "max": 0.9711538461538461
+      },
+      "full_feature/random_forest": {
+        "mean": 0.9519230769230769,
+        "min": 0.9326923076923077,
+        "max": 0.9807692307692307
+      },
+      "full_feature/xgboost": {
+        "mean": 0.9294871794871795,
+        "min": 0.8846153846153846,
+        "max": 0.9615384615384616
+      },
+      "full_feature/svm": {
+        "mean": 0.9551282051282051,
+        "min": 0.9423076923076923,
+        "max": 0.9807692307692307
+      },
+      "same_4_feature/logistic_regression": {
+        "mean": 0.8653846153846154,
+        "min": 0.8173076923076923,
+        "max": 0.9230769230769231
+      },
+      "same_4_feature/random_forest": {
+        "mean": 0.8557692307692307,
+        "min": 0.8173076923076923,
+        "max": 0.8942307692307693
+      },
+      "same_4_feature/xgboost": {
+        "mean": 0.8653846153846154,
+        "min": 0.8173076923076923,
+        "max": 0.9230769230769231
+      },
+      "same_4_feature/svm": {
+        "mean": 0.8653846153846154,
+        "min": 0.8173076923076923,
+        "max": 0.9230769230769231
+      }
+    }
+  },
+  "qualification": "A small single-center symptom questionnaire can yield high apparent accuracy. This record demonstrates pipeline reuse; it is not external, prospective, Indian-population, fairness, or clinical validation."
+}

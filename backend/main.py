@@ -14,9 +14,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from backend.runtime import ModelRuntime, RuntimeNotReady
+from backend.data.diseases import DEFAULT_DISEASE_ID
 from backend.request_limits import RequestSizeLimit
 
 
@@ -29,19 +30,36 @@ class RuntimeContract(Protocol):
 
     def health_payload(self) -> dict[str, Any]: ...
 
-    def patients_payload(self, limit: int) -> dict[str, Any]: ...
+    def diseases_payload(self) -> dict[str, Any]: ...
 
-    def predict_payload(self, features: list[float]) -> dict[str, Any]: ...
-
-    def ingest_payload(self, record: dict[str, float]) -> dict[str, Any]: ...
-
-    def explain_payload(
-        self, features: list[float], *, model: str, allow_slow: bool
+    def patients_payload(
+        self, limit: int, *, disease_id: str = DEFAULT_DISEASE_ID
     ) -> dict[str, Any]: ...
 
-    def baselines_payload(self) -> dict[str, Any]: ...
+    def predict_payload(
+        self, features: list[float], *, disease_id: str = DEFAULT_DISEASE_ID
+    ) -> dict[str, Any]: ...
 
-    def metrics_payload(self) -> dict[str, Any]: ...
+    def ingest_payload(
+        self, record: dict[str, float], *, disease_id: str = DEFAULT_DISEASE_ID
+    ) -> dict[str, Any]: ...
+
+    def explain_payload(
+        self,
+        features: list[float],
+        *,
+        model: str,
+        allow_slow: bool,
+        disease_id: str = DEFAULT_DISEASE_ID,
+    ) -> dict[str, Any]: ...
+
+    def baselines_payload(self, *, disease_id: str = DEFAULT_DISEASE_ID) -> dict[str, Any]: ...
+
+    def metrics_payload(self, *, disease_id: str = DEFAULT_DISEASE_ID) -> dict[str, Any]: ...
+
+    def report_payload(
+        self, features: list[float], *, disease_id: str = DEFAULT_DISEASE_ID
+    ) -> dict[str, Any]: ...
 
 
 class StrictRequest(BaseModel):
@@ -49,7 +67,8 @@ class StrictRequest(BaseModel):
 
 
 class FeatureRequest(StrictRequest):
-    features: list[float] = Field(min_length=30, max_length=30)
+    disease_id: str = Field(default=DEFAULT_DISEASE_ID, min_length=1, max_length=64)
+    features: list[float] = Field(min_length=4, max_length=64)
 
     @field_validator("features")
     @classmethod
@@ -57,6 +76,15 @@ class FeatureRequest(StrictRequest):
         if not all(math.isfinite(value) for value in values):
             raise ValueError("features must contain only finite values")
         return values
+
+    @model_validator(mode="after")
+    def disease_specific_shape(self) -> "FeatureRequest":
+        expected = {"breast_cancer": 30, "early_diabetes": 16}.get(self.disease_id)
+        if expected is not None and len(self.features) != expected:
+            raise ValueError(
+                f"{self.disease_id} requires exactly {expected} feature values"
+            )
+        return self
 
 
 class ExplainRequest(FeatureRequest):
@@ -67,7 +95,8 @@ class ExplainRequest(FeatureRequest):
 
 
 class NamedRecordRequest(StrictRequest):
-    record: dict[str, float] = Field(min_length=30, max_length=30)
+    disease_id: str = Field(default=DEFAULT_DISEASE_ID, min_length=1, max_length=64)
+    record: dict[str, float] = Field(min_length=4, max_length=64)
 
     @field_validator("record")
     @classmethod
@@ -78,6 +107,15 @@ class NamedRecordRequest(StrictRequest):
             raise ValueError("record names must be non-empty and values must be finite")
         return values
 
+    @model_validator(mode="after")
+    def disease_specific_shape(self) -> "NamedRecordRequest":
+        expected = {"breast_cancer": 30, "early_diabetes": 16}.get(self.disease_id)
+        if expected is not None and len(self.record) != expected:
+            raise ValueError(
+                f"{self.disease_id} requires exactly {expected} named features"
+            )
+        return self
+
 
 class RangeWarning(BaseModel):
     feature_name: str
@@ -87,8 +125,9 @@ class RangeWarning(BaseModel):
 
 
 class IngestResponse(BaseModel):
-    feature_names: list[str] = Field(min_length=30, max_length=30)
-    features: list[float] = Field(min_length=30, max_length=30)
+    disease_id: str = DEFAULT_DISEASE_ID
+    feature_names: list[str] = Field(min_length=4, max_length=64)
+    features: list[float] = Field(min_length=4, max_length=64)
     warnings: list[RangeWarning]
 
 
@@ -109,6 +148,7 @@ class HealthResponse(BaseModel):
     quantum_members: int
     classical_models: int
     selected_features: list[str]
+    disease_modules: list[dict[str, Any]] = Field(default_factory=list)
     runtime_configuration: RuntimeConfiguration
     error: str | None = None
 
@@ -116,22 +156,28 @@ class HealthResponse(BaseModel):
 class PatientSummary(BaseModel):
     id: int
     name: str
-    true_label: Literal["malignant", "benign"]
-    features: list[float] = Field(min_length=30, max_length=30)
+    true_label: str
+    features: list[float] = Field(min_length=4, max_length=64)
     selected_values: list[float] = Field(min_length=4, max_length=4)
     has_disagreement: bool
 
 
 class PatientCatalogResponse(BaseModel):
-    feature_names: list[str] = Field(min_length=30, max_length=30)
+    disease_id: str = DEFAULT_DISEASE_ID
+    disease_title: str | None = None
+    dataset_name: str | None = None
+    class_labels: list[str] = Field(default_factory=list)
+    feature_names: list[str] = Field(min_length=4, max_length=64)
     selected_feature_names: list[str] = Field(min_length=4, max_length=4)
     patients: list[PatientSummary]
 
 
 class PredictionLeaf(BaseModel):
-    label: Literal["malignant", "benign"]
+    label: str
     confidence: float = Field(ge=0.5, le=1.0)
-    benign_probability: float = Field(ge=0.0, le=1.0)
+    class_one_probability: float | None = Field(default=None, ge=0.0, le=1.0)
+    class_probabilities: dict[str, float] = Field(default_factory=dict)
+    benign_probability: float | None = Field(default=None, ge=0.0, le=1.0)
     model_name: str
     feature_count: int = Field(gt=0)
 
@@ -139,9 +185,11 @@ class PredictionLeaf(BaseModel):
 class QuantumMemberPrediction(BaseModel):
     name: str
     paradigm: Literal["VQC", "QSVM"]
-    label: Literal["malignant", "benign"]
+    label: str
     confidence: float = Field(ge=0.5, le=1.0)
-    benign_probability: float = Field(ge=0.0, le=1.0)
+    class_one_probability: float | None = Field(default=None, ge=0.0, le=1.0)
+    class_probabilities: dict[str, float] = Field(default_factory=dict)
+    benign_probability: float | None = Field(default=None, ge=0.0, le=1.0)
     weight: float = Field(ge=0.0, le=1.0)
 
 
@@ -162,6 +210,10 @@ class AgreementResult(BaseModel):
 
 
 class PredictResponse(BaseModel):
+    disease_id: str = DEFAULT_DISEASE_ID
+    disease_title: str | None = None
+    dataset_name: str | None = None
+    class_labels: list[str] = Field(default_factory=list)
     quantum: QuantumPrediction
     classical: ClassicalPrediction
     agreement: AgreementResult
@@ -172,12 +224,13 @@ class ExplanationFeature(BaseModel):
     feature_value: float
     shap_value: float
     lime_value: float
-    direction: Literal["toward_benign", "toward_malignant", "neutral"]
+    direction: str
 
 
 class ExplainResponse(BaseModel):
     """Attribution only: deliberately no confidence/probability field (D-23)."""
 
+    disease_id: str = DEFAULT_DISEASE_ID
     scope: Literal[
         "vqc_fast",
         "full_ensemble",
@@ -187,9 +240,7 @@ class ExplainResponse(BaseModel):
     feature_names: list[str] = Field(min_length=4, max_length=30)
     shap_values: list[float] = Field(min_length=4, max_length=30)
     lime_values: list[float] = Field(min_length=4, max_length=30)
-    directions: list[
-        Literal["toward_benign", "toward_malignant", "neutral"]
-    ] = Field(min_length=4, max_length=30)
+    directions: list[str] = Field(min_length=4, max_length=30)
     top_features: list[ExplanationFeature]
     expected_timing: str
     elapsed_seconds: float = Field(ge=0.0)
@@ -202,7 +253,8 @@ class BaselineConfiguration(BaseModel):
 
 
 class BaselinesResponse(BaseModel):
-    positive_class: Literal["malignant"]
+    disease_id: str = DEFAULT_DISEASE_ID
+    positive_class: str
     runtime_split_note: str | None = None
     configurations: dict[str, BaselineConfiguration]
 
@@ -219,10 +271,10 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
 
     application = FastAPI(
         title="Q-Trace | SIH26139 Hybrid Disease Detection",
-        version="0.5.0",
+        version="0.6.0",
         description=(
-            "Research prototype: six-model quantum ensemble benchmarked beside "
-            "classical models on the Wisconsin Breast Cancer dataset."
+            "Multi-disease research prototype: a six-model quantum ensemble "
+            "benchmarked beside classical models on two biomedical datasets."
         ),
         lifespan=lifespan,
     )
@@ -292,6 +344,10 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
     def health() -> dict[str, Any]:
         return active_runtime.health_payload()
 
+    @application.get("/diseases", tags=["data"])
+    def diseases() -> dict[str, Any]:
+        return ready_call(active_runtime.diseases_payload)
+
     @application.get(
         "/patients",
         response_model=PatientCatalogResponse,
@@ -299,8 +355,16 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
     )
     def patients(
         limit: int = Query(default=8, ge=1, le=24),
+        disease_id: str = Query(default=DEFAULT_DISEASE_ID),
     ) -> dict[str, Any]:
-        return ready_call(active_runtime.patients_payload, limit)
+        if disease_id == DEFAULT_DISEASE_ID:
+            return ready_call(active_runtime.patients_payload, limit)
+        try:
+            return ready_call(
+                active_runtime.patients_payload, limit, disease_id=disease_id
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
     @application.post(
         "/ingest",
@@ -309,31 +373,47 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
     )
     def ingest(request: NamedRecordRequest) -> dict[str, Any]:
         try:
-            return ready_call(active_runtime.ingest_payload, request.record)
+            if request.disease_id == DEFAULT_DISEASE_ID:
+                return ready_call(active_runtime.ingest_payload, request.record)
+            return ready_call(
+                active_runtime.ingest_payload,
+                request.record,
+                disease_id=request.disease_id,
+            )
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
 
     @application.post(
         "/predict",
         response_model=PredictResponse,
+        response_model_exclude_none=True,
+        response_model_exclude_unset=True,
         tags=["inference"],
     )
     def predict(request: FeatureRequest) -> dict[str, Any]:
-        return inference_call(active_runtime.predict_payload, request.features)
+        try:
+            if request.disease_id == DEFAULT_DISEASE_ID:
+                return inference_call(active_runtime.predict_payload, request.features)
+            return inference_call(
+                active_runtime.predict_payload,
+                request.features,
+                disease_id=request.disease_id,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
     @application.post(
         "/explain",
         response_model=ExplainResponse,
+        response_model_exclude_none=True,
         tags=["explainability"],
     )
     def explain(request: ExplainRequest) -> dict[str, Any]:
         try:
-            return inference_call(
-                active_runtime.explain_payload,
-                request.features,
-                model=request.model,
-                allow_slow=request.allow_slow,
-            )
+            kwargs = {"model": request.model, "allow_slow": request.allow_slow}
+            if request.disease_id != DEFAULT_DISEASE_ID:
+                kwargs["disease_id"] = request.disease_id
+            return inference_call(active_runtime.explain_payload, request.features, **kwargs)
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
 
@@ -343,12 +423,39 @@ def create_app(*, runtime: RuntimeContract | None = None) -> FastAPI:
         response_model_exclude_none=True,
         tags=["benchmarking"],
     )
-    def baselines() -> dict[str, Any]:
-        return ready_call(active_runtime.baselines_payload)
+    def baselines(
+        disease_id: str = Query(default=DEFAULT_DISEASE_ID),
+    ) -> dict[str, Any]:
+        if disease_id == DEFAULT_DISEASE_ID:
+            return ready_call(active_runtime.baselines_payload)
+        try:
+            return ready_call(active_runtime.baselines_payload, disease_id=disease_id)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
     @application.get("/metrics", tags=["benchmarking"])
-    def metrics() -> dict[str, Any]:
-        return ready_call(active_runtime.metrics_payload)
+    def metrics(
+        disease_id: str = Query(default=DEFAULT_DISEASE_ID),
+    ) -> dict[str, Any]:
+        if disease_id == DEFAULT_DISEASE_ID:
+            return ready_call(active_runtime.metrics_payload)
+        try:
+            return ready_call(active_runtime.metrics_payload, disease_id=disease_id)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @application.post("/report", tags=["reporting"])
+    def report(request: FeatureRequest) -> dict[str, Any]:
+        try:
+            if request.disease_id == DEFAULT_DISEASE_ID:
+                return inference_call(active_runtime.report_payload, request.features)
+            return inference_call(
+                active_runtime.report_payload,
+                request.features,
+                disease_id=request.disease_id,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
     if FRONTEND_ROOT.exists():
         application.mount(
