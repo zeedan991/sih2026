@@ -145,3 +145,26 @@ def test_catalog_failure_does_not_stop_health_retry_polling() -> None:
     source = (PROJECT_ROOT / "frontend/app.js").read_text(encoding="utf-8")
     assert "if (state.catalog && state.healthTimer)" in source
     assert source.index("await loadPatients()") < source.index("window.clearInterval(state.healthTimer)")
+
+
+def test_run_button_uses_current_catalog_or_manual_record_without_stale_state() -> None:
+    html = (PROJECT_ROOT / "frontend/index.html").read_text(encoding="utf-8")
+    source = (PROJECT_ROOT / "frontend/app.js").read_text(encoding="utf-8")
+
+    selected_patient = source[
+        source.index("function renderSelectedPatient") : source.index("function parseCsvRecord")
+    ]
+    manual_record = source[
+        source.index("function applyManualRecord") : source.index("async function loadEvidence")
+    ]
+    run_prediction = source[
+        source.index("async function runPrediction") : source.index("function buildPrintableReport")
+    ]
+
+    assert "syncPredictButtonAvailability();" in selected_patient
+    assert 'String(field.value).trim() === ""' in manual_record
+    assert "state.patient = null;" in manual_record
+    assert 'elements.patientSource.value === "manual"' in run_prediction
+    assert "applyManualRecord({ reset: false })" in run_prediction
+    assert 'elements.manualFields.addEventListener("input"' in source
+    assert '/static/app.js?v=0.6.4' in html

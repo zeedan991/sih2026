@@ -166,6 +166,10 @@ function clearError() {
   elements.errorBanner.textContent = "";
 }
 
+function syncPredictButtonAvailability() {
+  elements.predictButton.disabled = state.isBusy || !state.patient;
+}
+
 function setBusy(busy) {
   state.isBusy = busy;
   elements.patientSelect.disabled = busy || !state.catalog;
@@ -174,7 +178,7 @@ function setBusy(busy) {
   elements.csvFile.disabled = busy || !state.catalog;
   elements.useManualRecord.disabled = busy || !state.catalog;
   elements.manualFields.querySelectorAll("input, select").forEach((field) => { field.disabled = busy; });
-  elements.predictButton.disabled = busy || !state.patient;
+  syncPredictButtonAvailability();
   elements.explainButton.disabled = busy || !state.prediction;
   elements.reportButton.disabled = busy || !state.prediction;
   elements.scopeOptions.forEach((option) => { option.disabled = busy; });
@@ -353,6 +357,7 @@ function renderSelectedPatient(index) {
     )
     .join("");
   resetResultForPatientChange();
+  syncPredictButtonAvailability();
 }
 
 function parseCsvRecord(text) {
@@ -420,19 +425,22 @@ async function loadCsvRecord(file) {
     elements.ingestionWarnings.textContent = validated.warnings.length
       ? `${validated.warnings.length} value(s) are outside the benchmark's observed range. Interpret this result cautiously.`
       : "Schema validated. All values are within the benchmark's observed ranges.";
-    elements.predictButton.disabled = false;
     resetResultForPatientChange();
+    syncPredictButtonAvailability();
   } catch (error) {
     state.patient = null;
-    elements.predictButton.disabled = true;
+    syncPredictButtonAvailability();
     showError(`CSV could not be loaded: ${error.message}`);
   }
 }
 
-function useManualRecord() {
-  if (!state.catalog || !state.activeModule) return;
+function applyManualRecord({ reset = true, showValidationError = true } = {}) {
+  if (!state.catalog || !state.activeModule) return false;
   try {
     const fields = [...elements.manualFields.querySelectorAll("input, select")];
+    if (fields.some((field) => String(field.value).trim() === "")) {
+      throw new Error("Every module field needs a value.");
+    }
     const features = fields.map((field) => Number(field.value));
     if (features.length !== state.catalog.feature_names.length || features.some((value) => !Number.isFinite(value))) {
       throw new Error("Every module field needs a finite numeric value.");
@@ -453,12 +461,20 @@ function useManualRecord() {
     elements.selectedFeatureChips.innerHTML = state.catalog.selected_feature_names
       .map((name, index) => `<div class="feature-chip"><span title="${escapeHtml(name)}">${escapeHtml(name)}</span><strong>${formatFeatureValue(state.patient.selected_values[index])}</strong></div>`)
       .join("");
-    elements.predictButton.disabled = false;
-    resetResultForPatientChange();
-    elements.predictButton.disabled = false;
+    if (reset) resetResultForPatientChange();
+    syncPredictButtonAvailability();
+    return true;
   } catch (error) {
-    showError(`Manual record could not be used: ${error.message}`);
+    state.patient = null;
+    if (reset) resetResultForPatientChange();
+    syncPredictButtonAvailability();
+    if (showValidationError) showError(`Manual record could not be used: ${error.message}`);
+    return false;
   }
+}
+
+function useManualRecord() {
+  applyManualRecord();
 }
 
 async function loadEvidence() {
@@ -650,7 +666,9 @@ function renderPrediction(payload) {
 }
 
 async function runPrediction() {
-  if (!state.patient || state.isBusy) return;
+  if (state.isBusy) return;
+  if (elements.patientSource.value === "manual" && !applyManualRecord({ reset: false })) return;
+  if (!state.patient) return;
   resetResultForPatientChange();
   const generation = state.generation;
   const features = state.patient.features.slice();
@@ -946,8 +964,15 @@ elements.patientSource.addEventListener("change", (event) => {
   elements.patientSelectLabel.hidden = upload || manual;
   elements.patientSelect.parentElement.hidden = upload || manual;
   elements.patientSelect.disabled = upload || manual || state.isBusy;
-  if (!upload && !manual) renderSelectedPatient(Number(elements.patientSelect.value || 0));
-  else { state.patient = null; resetResultForPatientChange(); elements.predictButton.disabled = true; }
+  if (!upload && !manual) {
+    renderSelectedPatient(Number(elements.patientSelect.value || 0));
+  } else if (manual) {
+    applyManualRecord({ showValidationError: false });
+  } else {
+    state.patient = null;
+    resetResultForPatientChange();
+    syncPredictButtonAvailability();
+  }
 });
 elements.csvFile.addEventListener("change", (event) => {
   const [file] = event.target.files;
@@ -955,6 +980,11 @@ elements.csvFile.addEventListener("change", (event) => {
 });
 elements.csvExample.addEventListener("click", downloadExampleCsv);
 elements.useManualRecord.addEventListener("click", useManualRecord);
+elements.manualFields.addEventListener("input", () => {
+  if (!state.isBusy && elements.patientSource.value === "manual") {
+    applyManualRecord({ showValidationError: false });
+  }
+});
 elements.predictButton.addEventListener("click", runPrediction);
 elements.explainButton.addEventListener("click", runExplanation);
 elements.reportButton.addEventListener("click", runReport);
